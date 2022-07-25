@@ -44,25 +44,28 @@ Button button_down(Tufty2040::DOWN);
 const Vec2D screen_size { Tufty2040::WIDTH, Tufty2040::HEIGHT };
 const Vec2D half_screen_size = screen_size >> 1;
 
-const Vec2D screen_scale { screen_size.x << 5, -screen_size.x << 5 };
+const int screen_scale = Tufty2040::WIDTH << 5;
 
 // Project from camera relative space (Z forward from camera, X right, Y up)
-// int screen space
+// into screen space
 Vec2D project_vertex(const Vec3D& v) {
-  int inv_z = 0x40000000 / v.z;
-  Vec2D scale { screen_scale.x * inv_z, screen_scale.y * inv_z };
-  return ((Vec2D{v.x, v.y} * scale) >> 18) + half_screen_size;
+  const int inv_z = 0x40000000 / v.z.val;
+  const int scale = screen_scale * inv_z;
+  Vec2D rv;
+  rv.x.val = scale;
+  rv.y.val = -scale;
+  return (Vec2D{v.x, v.y} * rv) + half_screen_size;
 }
 
 Point make_point(const Vec2D& v) {
-  return Point(v.x, v.y);
+  return Point(int(v.x), int(v.y));
 }
 
 void draw_triangle(const Vec3D (&v)[3]) {
   Point w[3];
   for (int i = 0; i < 3; ++i) {
     w[i] = make_point(project_vertex(v[i]));
-    printf("%d %d %d\t%d %d\n", v[i].x, v[i].y, v[i].z, w[i].x, w[i].y);
+    //printf("%d %d %d\t%d %d\n", v[i].x, v[i].y, v[i].z, w[i].x, w[i].y);
   }
 
   graphics.line(w[0], w[1]);
@@ -82,19 +85,21 @@ void draw_cube(float theta, float phi) {
     { 1, -1, -1 }
   };
 
-  Vec3D offset { 0, 0, 1 << 20 };
+  Vec3D offset { 0, 0, 4};
   Point w[8];
   for (int i = 0; i < 8; ++i) {
-    cube[i] <<= 18;
-
     Vec3D v;
+    fixed_t cp(cosf(phi));
+    fixed_t sp(sinf(phi));
     v.x = cube[i].x;
-    v.y = cube[i].y * cosf(phi) + cube[i].z * sinf(phi);
-    v.z = cube[i].z * cosf(phi) - cube[i].y * sinf(phi);
+    v.y = cube[i].y * cp + cube[i].z * sp;
+    v.z = cube[i].z * cp - cube[i].y * sp;
     cube[i] = v;
 
-    v.x = cube[i].x * cosf(theta) + cube[i].y * sinf(theta);
-    v.y = cube[i].y * cosf(theta) - cube[i].x * sinf(theta);
+    fixed_t ct(cosf(theta));
+    fixed_t st(sinf(theta));
+    v.x = cube[i].x * ct + cube[i].y * st;
+    v.y = cube[i].y * ct - cube[i].x * st;
     v.z = cube[i].z;
 
     v += offset;
@@ -110,8 +115,6 @@ void draw_cube(float theta, float phi) {
 }
 
 int main() {
-  set_sys_clock_48mhz();
-
   stdio_init_all();
 
   st7789.set_backlight(255);
@@ -126,9 +129,9 @@ int main() {
   st7789.update(&graphics);
 
   Vec3D tri[3] = {
-    { -1 << 18, 0, 1 << 20 },
-    { 0, -1 << 18, 1 << 20 },
-    { 0, 0, 1 << 20 }
+    { -1, 0, 4 },
+    { 0, -1, 4 },
+    { 0, 0, 4 }
   };
 
 #if 1
@@ -145,7 +148,7 @@ int main() {
     st7789.update(&graphics);
   }
 #endif
-  for (int i = 1 << 18; i < (1 << 22); i += 1 << 10) {
+  for (fixed_t i = 1; int(i) < 16; i += fixed_t(0, 1 << 10)) {
     graphics.set_pen(BG);
     graphics.clear();
     graphics.set_pen(WHITE);
