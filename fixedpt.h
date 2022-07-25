@@ -71,6 +71,37 @@ inline fixed_pt<PT>& operator*=(fixed_pt<PT>& a, const fixed_pt<PT>& b)
 }
 
 template <int PT>
+inline fixed_pt<PT> operator/(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
+{
+    fixed_pt<PT> v;
+    int64_t a64 = a.val;
+    v.val = (a64 << PT) / b.val;
+    return v;
+}
+
+template <int PT>
+inline fixed_pt<PT>& operator/=(fixed_pt<PT>& a, const fixed_pt<PT>& b)
+{
+    a = a / b;
+    return a;
+}
+
+template <int PT>
+inline fixed_pt<PT> operator/(const fixed_pt<PT>& a, const int b)
+{
+    fixed_pt<PT> v;
+    v.val = a.val / b;
+    return v;
+}
+
+template <int PT>
+inline fixed_pt<PT>& operator/=(fixed_pt<PT>& a, const int b)
+{
+    a.val = a.val / b;
+    return a;
+}
+
+template <int PT>
 inline fixed_pt<PT> operator<<(const fixed_pt<PT>& a, const int b)
 {
     fixed_pt<PT> v;
@@ -98,4 +129,40 @@ inline fixed_pt<PT>& operator>>=(fixed_pt<PT>& a, const int b)
 {
     a.val >>= b;
     return a;
+}
+
+template <int PT>
+inline bool operator<(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
+{
+    return a.val < b.val;
+}
+
+template <int PT>
+inline bool operator<=(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
+{
+    return a.val <= b.val;
+}
+
+template <int PT>
+inline bool operator>(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
+{
+    return a.val > b.val;
+}
+
+template <int PT>
+inline bool operator>=(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
+{
+    return a.val >= b.val;
+}
+
+template <int PT>
+inline bool operator==(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
+{
+    return a.val == b.val;
+}
+
+template <int PT>
+inline bool operator!=(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
+{
+    return a.val != b.val;
 }

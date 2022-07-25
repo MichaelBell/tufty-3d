@@ -17,6 +17,9 @@
 
 using namespace pimoroni;
 
+using std::min;
+using std::max;
+
 Tufty2040 tufty;
 
 ST7789 st7789(
@@ -73,6 +76,111 @@ void draw_triangle(const Vec3D (&v)[3]) {
   graphics.line(w[2], w[0]);
 }
 
+void fill_triangle(const Vec3D (&v)[3]) {
+  Vec2D w[3];
+  for (int i = 0; i < 3; ++i) {
+    w[i] = project_vertex(v[i]);
+  }
+
+  // Order points so first has least y coord, and second has lower x coord than third
+  struct RasterPoint
+  {
+    fixed_t x;
+    int y;
+    RasterPoint() = default;
+    RasterPoint(const Vec2D& v)
+      : x(v.x)
+      , y(v.y)
+    {}
+  } wo[3];
+  if (w[0].y < w[1].y && w[0].y < w[2].y) {
+    wo[0] = w[0];
+    if (w[1].x < w[2].x) {
+      wo[1] = w[1];
+      wo[2] = w[2];
+    } else {
+      wo[1] = w[2];
+      wo[2] = w[1];
+    }
+  } else if (w[1].y < w[0].y && w[1].y < w[2].y) {
+    wo[0] = w[1];
+    if (w[0].x < w[2].x) {
+      wo[1] = w[0];
+      wo[2] = w[2];
+    } else {
+      wo[1] = w[2];
+      wo[2] = w[0];
+    }
+  }
+  else {
+    wo[0] = w[2];
+    if (w[0].x < w[1].x) {
+      wo[1] = w[0];
+      wo[2] = w[1];
+    } else {
+      wo[1] = w[1];
+      wo[2] = w[0];
+    }
+  }
+
+  int end_y = max(wo[1].y, wo[2].y);
+
+  if (wo[0].y == end_y) {
+    int start_x(min(wo[0].x, wo[1].x));
+    int end_x(max(wo[0].x, wo[2].x));
+    graphics.pixel_span(Point(start_x, wo[0].y), end_x - start_x + 1);
+    return;
+  }
+
+  fixed_t start_x = wo[0].x;
+  fixed_t end_x = wo[0].x;
+  fixed_t grad_start_x = 0;
+  fixed_t grad_end_x = 0;
+  if (wo[1].y > wo[0].y) {
+    grad_start_x = (wo[1].x - wo[0].x) / (wo[1].y - wo[0].y);
+  }
+  if (wo[2].y > wo[0].y) {
+    grad_end_x = (wo[2].x - wo[0].x) / (wo[2].y - wo[0].y);
+  }
+
+  bool new_start = true;
+  bool new_end = true;
+  for (int y = wo[0].y; y <= end_y; ++y) {
+    if (y != end_y && wo[1].y == y) {
+      start_x = wo[1].x;
+      if (wo[2].y > y) {
+        grad_start_x = (wo[2].x - start_x) / (wo[2].y - y);
+        new_start = true;
+      }
+    }
+    else {
+      if (new_start) {
+        start_x += grad_start_x >> 1;
+        new_start = false;
+      } else {
+        start_x += grad_start_x;
+      }
+    }
+    if (y != end_y && wo[2].y == y) {
+      end_x = wo[2].x;
+      if (wo[1].y > y) {
+        grad_end_x = (wo[1].x - end_x) / (wo[1].y - y);
+        new_end = true;
+      }
+    }
+    else {
+      if (new_end) {
+        end_x += grad_end_x >> 1;
+        new_end = false;
+      } else {
+        end_x += grad_end_x;
+      }
+    }
+
+    graphics.pixel_span(Point(int(start_x), y), int(end_x - start_x) + 1);
+  }
+}
+
 void draw_cube(float theta, float phi) {
   Vec3D cube[8] = {
     { 1, 1, 1 },
@@ -120,6 +228,9 @@ int main() {
   st7789.set_backlight(255);
 
   Pen WHITE = graphics.create_pen(255, 255, 255);
+  Pen RED = graphics.create_pen(255, 0, 0);
+  Pen GREEN = graphics.create_pen(0, 255, 0);
+  Pen BLUE = graphics.create_pen(0, 0, 255);
   Pen BG = graphics.create_pen(120, 40, 60);
 
   uint8_t i = 0;
@@ -134,7 +245,7 @@ int main() {
     { 0, 0, 4 }
   };
 
-#if 1
+#if 0
   float phi = 0;
   float theta = 0;
   while (true) {
@@ -148,14 +259,45 @@ int main() {
     st7789.update(&graphics);
   }
 #endif
-  for (fixed_t i = 1; int(i) < 16; i += fixed_t(0, 1 << 10)) {
+  for (float phi = 0; phi < 6.3f; phi += 0.01f) {
+    graphics.set_pen(BG);
+    graphics.clear();
+
+    tri[0].x = cosf(phi);
+    tri[0].y = sinf(phi);
+    tri[1].x = cosf(phi + 1.1f);
+    tri[1].y = sinf(phi + 1.1f);
+    graphics.set_pen(WHITE);
+    fill_triangle(tri);
+
+    tri[0] = tri[1];
+    tri[1].x = cosf(phi + 2.2f);
+    tri[1].y = sinf(phi + 2.2f);
+    graphics.set_pen(RED);
+    fill_triangle(tri);
+
+    tri[0] = tri[1];
+    tri[1].x = cosf(phi + 3.3f);
+    tri[1].y = sinf(phi + 3.3f);
+    graphics.set_pen(GREEN);
+    fill_triangle(tri);
+
+    tri[0] = tri[1];
+    tri[1].x = cosf(phi + 4.4f);
+    tri[1].y = sinf(phi + 4.4f);
+    graphics.set_pen(BLUE);
+    fill_triangle(tri);
+
+    st7789.update(&graphics);
+  }
+  for (fixed_t i = 1; i < fixed_t(16); i += fixed_t(0, 1 << 10)) {
     graphics.set_pen(BG);
     graphics.clear();
     graphics.set_pen(WHITE);
     for (int j = 0; j < 3; ++j) {
       tri[j].z = i;
     }
-    draw_triangle(tri);
+    fill_triangle(tri);
     st7789.update(&graphics);
   }
 
