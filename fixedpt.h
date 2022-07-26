@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include <type_traits>
 #include "pico/float.h"
 
 template <int PT>
@@ -9,17 +10,25 @@ struct fixed_pt
     int val;
 
     fixed_pt() = default;
-    fixed_pt(const int n)
+    constexpr fixed_pt(const int n)
         : val(n << PT)
     {}
-    fixed_pt(const int i, const int frac)
+    constexpr fixed_pt(const int i, const int frac)
         : val((i << PT) | frac)
     {}
-    fixed_pt(const float f)
-        : val(float2fix(f, PT))
-    {}
+    constexpr fixed_pt(const float f)
+    {
+        if (std::is_constant_evaluated())
+        {
+            val = int(f * exp2(PT));
+        }
+        else
+        {
+            val = float2fix(f, PT);
+        }
+    }
 
-    explicit operator int() const { return val >> PT; }
+    explicit constexpr operator int() const { return val >> PT; }
     explicit operator float() const { return fix2float(val, PT); }
 };
 

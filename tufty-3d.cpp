@@ -14,6 +14,9 @@
 #include "button.hpp"
 
 #include "vector.h"
+#include "lighting.h"
+#include "rendering.h"
+#include "teapot.h"
 
 using namespace pimoroni;
 
@@ -43,31 +46,6 @@ Button button_b(Tufty2040::B);
 Button button_c(Tufty2040::C);
 Button button_up(Tufty2040::UP);
 Button button_down(Tufty2040::DOWN);
-
-const Vec2D screen_size { Tufty2040::WIDTH, Tufty2040::HEIGHT };
-const Vec2D half_screen_size = screen_size >> 1;
-
-const int screen_scale = Tufty2040::WIDTH << 5;
-
-// Project from camera relative space (Z forward from camera, X right, Y up)
-// into screen space
-Vec2D project_vertex(const Vec3D& v) {
-  const int inv_z = 0x40000000 / v.z.val;
-  const int scale = screen_scale * inv_z;
-  Vec2D rv;
-  rv.x.val = scale;
-  rv.y.val = -scale;
-  return (Vec2D{v.x, v.y} * rv) + half_screen_size;
-}
-
-Point make_point(const Vec2D& v) {
-  return Point(int(v.x), int(v.y));
-}
-
-Vec3D triangle_normal(const Vec3D (&v)[3]) {
-  Vec3D perp = Cross((v[2] - v[0]), (v[1] - v[0]));
-  return Normalize(perp);
-}
 
 void draw_triangle(const Vec3D (&v)[3]) {
   Point w[3];
@@ -186,34 +164,6 @@ void fill_triangle(const Vec3D (&v)[3]) {
   }
 }
 
-const Vec3D light_direction = Normalize(Vec3D{ 1, 1, -1 });
-const fixed_t ambient_proportion { 0.2f };
-const fixed_t diffuse_proportion { 0.8f };
-
-RGB565 get_lit_colour(const Vec3D& normal, const Vec3D& ambient_colour, const Vec3D& diffuse_colour)
-{
-  const fixed_t l = Dot(light_direction, normal);
-
-  Vec3D colour;
-  if (l < fixed_t(0)) colour = ambient_colour;
-  else colour = diffuse_colour * min(fixed_t(1), l) + ambient_colour;
-
-  return __builtin_bswap16(((colour.x.val >> (FIXED_PT_PREC + 3 - 11)) & 0xf800) |
-                           ((colour.y.val >> (FIXED_PT_PREC + 2 -  5)) & 0x07e0) |
-                           ((colour.z.val >> (FIXED_PT_PREC + 3)) & 0x001f));
-}
-
-Vec3D make_vec_colour(const RGB& colour, const fixed_t proportion)
-{
-  return Vec3D { colour.r, colour.g, colour.b } * proportion;
-}
-
-void set_colour_for_tri(const Vec3D (&v)[3], const Vec3D& ambient_colour, const Vec3D& diffuse_colour)
-{
-  RGB565 colour = get_lit_colour(triangle_normal(v), ambient_colour, diffuse_colour);
-  graphics.set_pen(colour);
-}
-
 void draw_cube(float theta, float phi) {
   Vec3D cube[8] = {
     { 1, 1, 1 },
@@ -268,24 +218,16 @@ int main() {
   Pen BLUE = graphics.create_pen(0, 0, 255);
   Pen BG = graphics.create_pen(120, 40, 60);
 
-  Vec3D ambient_colour = make_vec_colour(RGB(0, 0, 0), ambient_proportion);
-  Vec3D diffuse_white = make_vec_colour(RGB(255, 255, 255), diffuse_proportion);
-  Vec3D diffuse_red = make_vec_colour(RGB(255, 0, 0), diffuse_proportion);
-  Vec3D diffuse_green = make_vec_colour(RGB(0, 255, 0), diffuse_proportion);
-  Vec3D diffuse_blue = make_vec_colour(RGB(0, 0, 255), diffuse_proportion);
-  printf("%d %d %d %d\n", diffuse_proportion, diffuse_white.x, diffuse_white.y, diffuse_white.z);
+  Material mat_white = make_material_for_colour(RGB(255, 255, 255));
+  Material mat_red = make_material_for_colour(RGB(255, 0, 0));
+  Material mat_green = make_material_for_colour(RGB(0, 255, 0));
+  Material mat_blue = make_material_for_colour(RGB(0, 0, 255));
 
   uint8_t i = 0;
 
   graphics.set_pen(BG);
   graphics.clear();
   st7789.update(&graphics);
-
-  Vec3D tri[3] = {
-    { 0, 1, 4 },
-    { 1, 0, 4 },
-    { 0, 0, 3 }
-  };
 
 #if 0
   float phi = 0;
@@ -301,47 +243,66 @@ int main() {
     st7789.update(&graphics);
   }
 #endif
-  for (float phi = 0; phi < 6.3f; phi += 0.01f) {
+#if 0
+  for (float phi = 0; phi < 7.f; phi += 0.01f) {
     graphics.set_pen(BG);
     graphics.clear();
+
+    Model tri_model;
+    Vec3D tri[] = {
+      { 0, 0, 4 },
+      { 0, 0, 4 },
+      { 0, 0, 3 }
+    };
+    tri_model.vertices = tri;
+    tri_model.num_vertices = 3;
+    Triangle triangles[] = { { { 0, 1, 2 }, 0 } };
+    tri_model.triangles = triangles;
+    tri_model.num_triangles = 1;
+    tri_model.materials = &mat_white;
+    tri_model.num_materials = 1;
 
     tri[0].x = cosf(phi);
     tri[0].y = sinf(phi);
     tri[1].x = cosf(phi + 1.1f);
     tri[1].y = sinf(phi + 1.1f);
-    set_colour_for_tri(tri, ambient_colour, diffuse_white);
-    fill_triangle(tri);
+    set_triangle_normals(tri_model);
+    render_model(tri_model);
 
     tri[0] = tri[1];
     tri[1].x = cosf(phi + 2.2f);
     tri[1].y = sinf(phi + 2.2f);
-    set_colour_for_tri(tri, ambient_colour, diffuse_red);
-    fill_triangle(tri);
+    tri_model.materials = &mat_red;
+    set_triangle_normals(tri_model);
+    render_model(tri_model);
 
     tri[0] = tri[1];
     tri[1].x = cosf(phi + 3.3f);
     tri[1].y = sinf(phi + 3.3f);
-    set_colour_for_tri(tri, ambient_colour, diffuse_green);
-    fill_triangle(tri);
+    tri_model.materials = &mat_green;
+    set_triangle_normals(tri_model);
+    render_model(tri_model);
 
     tri[0] = tri[1];
     tri[1].x = cosf(phi + 4.4f);
     tri[1].y = sinf(phi + 4.4f);
-    set_colour_for_tri(tri, ambient_colour, diffuse_blue);
-    fill_triangle(tri);
+    tri_model.materials = &mat_blue;
+    set_triangle_normals(tri_model);
+    render_model(tri_model);
 
     st7789.update(&graphics);
+
+    if (phi > 2 * M_PI) phi -= 2 * M_PI;
   }
-  for (fixed_t i = 1; i < fixed_t(16); i += fixed_t(0, 1 << 10)) {
-    graphics.set_pen(BG);
-    graphics.clear();
-    graphics.set_pen(WHITE);
-    for (int j = 0; j < 3; ++j) {
-      tri[j].z = i;
-    }
-    fill_triangle(tri);
-    st7789.update(&graphics);
-  }
+#endif
+
+  graphics.set_pen(BG);
+  graphics.clear();
+
+
+  Model& teapot_model = get_teapot_model();
+  render_model(teapot_model);
+  st7789.update(&graphics);
 
   return 0;
 }

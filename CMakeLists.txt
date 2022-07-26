@@ -11,14 +11,18 @@ set(PICO_BOARD pimoroni_tufty2040)
 # Gooey boilerplate
 project(${NAME} C CXX ASM)
 set(CMAKE_C_STANDARD 11)
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 
 # Initialize the SDK
 pico_sdk_init()
 
 # Add your source files
 add_executable(${NAME}
-    tufty-3d.cpp # <-- Add source files here!
+    tufty-3d.cpp 
+    lighting.cpp
+    model.cpp
+    rendering.cpp
+    teapot.cpp
 )
 
 pico_set_program_name(${NAME} "tufty-3d")
@@ -46,6 +50,9 @@ target_link_libraries(${NAME}
     pico_graphics
     button
 )
+
+# Disable volatile warnings produced by Pico SDK (warnings introduced in C++20)
+target_compile_options(${NAME} PRIVATE $<$<COMPILE_LANGUAGE:CXX>:-Wno-volatile>)
 
 # create map/bin/hex file etc.
 pico_add_extra_outputs(${NAME})
