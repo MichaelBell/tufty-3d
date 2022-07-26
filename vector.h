@@ -63,6 +63,10 @@ inline Vec2D& operator>>=(Vec2D& a, const int b) {
   return a;
 }
 
+inline fixed_t Dot(const Vec2D& a, const Vec2D& b) {
+  return a.x * b.x + a.y * b.y;
+}
+
 struct Vec3D {
   fixed_t x, y, z;
 };
@@ -103,6 +107,24 @@ inline Vec3D& operator*=(Vec3D& a, const fixed_t& b) {
   return a;
 }
 
+inline Vec3D operator/(const Vec3D& a, const Vec3D& b) {
+  return Vec3D{ a.x / b.x, a.y / b.y, a.z / b.z };
+}
+
+inline Vec3D& operator/=(Vec3D& a, const Vec3D& b) {
+  a.x /= b.x; a.y /= b.y; a.z /= b.z;
+  return a;
+}
+
+inline Vec3D operator/(const Vec3D& a, const fixed_t& b) {
+  return Vec3D{ a.x / b, a.y / b, a.z / b };
+}
+
+inline Vec3D& operator/=(Vec3D& a, const fixed_t& b) {
+  a.x /= b; a.y /= b; a.z /= b;
+  return a;
+}
+
 inline Vec3D operator<<(const Vec3D& a, const int b) {
   return Vec3D{ a.x << b, a.y << b, a.z << b };
 }
@@ -119,4 +141,26 @@ inline Vec3D operator>>(const Vec3D& a, const int b) {
 inline Vec3D& operator>>=(Vec3D& a, const int b) {
   a.x >>= b; a.y >>= b; a.z >>= b;
   return a;
+}
+
+inline fixed_t Dot(const Vec3D& a, const Vec3D& b) {
+  return a.x * b.x + a.y * b.y + a.z * b.z;
+}
+
+inline Vec3D Cross(const Vec3D& a, const Vec3D& b) {
+  Vec3D v;
+  v.x = a.y * b.z - a.z * b.y;
+  v.y = a.z * b.x - a.x * b.z;
+  v.z = a.x * b.y - a.y * b.x;
+  return v; 
+}
+
+inline Vec3D Normalize(const Vec3D& a) {
+  fixed_t len = Dot(a, a);
+  if (len.val == 0) {
+    return Vec3D{0, 0, 0};
+  }
+
+  // TODO: Need a fast reciprocal sqrt
+  return a / sqrt(len);
 }

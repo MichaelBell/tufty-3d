@@ -36,7 +36,7 @@ ST7789 st7789(
   }
 );
 
-PicoGraphics_PenRGB332 graphics(st7789.width, st7789.height, nullptr);
+PicoGraphics_PenRGB565 graphics(st7789.width, st7789.height, nullptr);
 
 Button button_a(Tufty2040::A);
 Button button_b(Tufty2040::B);
@@ -62,6 +62,11 @@ Vec2D project_vertex(const Vec3D& v) {
 
 Point make_point(const Vec2D& v) {
   return Point(int(v.x), int(v.y));
+}
+
+Vec3D triangle_normal(const Vec3D (&v)[3]) {
+  Vec3D perp = Cross((v[2] - v[0]), (v[1] - v[0]));
+  return Normalize(perp);
 }
 
 void draw_triangle(const Vec3D (&v)[3]) {
@@ -181,6 +186,34 @@ void fill_triangle(const Vec3D (&v)[3]) {
   }
 }
 
+const Vec3D light_direction = Normalize(Vec3D{ 1, 1, -1 });
+const fixed_t ambient_proportion { 0.2f };
+const fixed_t diffuse_proportion { 0.8f };
+
+RGB565 get_lit_colour(const Vec3D& normal, const Vec3D& ambient_colour, const Vec3D& diffuse_colour)
+{
+  const fixed_t l = Dot(light_direction, normal);
+
+  Vec3D colour;
+  if (l < fixed_t(0)) colour = ambient_colour;
+  else colour = diffuse_colour * min(fixed_t(1), l) + ambient_colour;
+
+  return __builtin_bswap16(((colour.x.val >> (FIXED_PT_PREC + 3 - 11)) & 0xf800) |
+                           ((colour.y.val >> (FIXED_PT_PREC + 2 -  5)) & 0x07e0) |
+                           ((colour.z.val >> (FIXED_PT_PREC + 3)) & 0x001f));
+}
+
+Vec3D make_vec_colour(const RGB& colour, const fixed_t proportion)
+{
+  return Vec3D { colour.r, colour.g, colour.b } * proportion;
+}
+
+void set_colour_for_tri(const Vec3D (&v)[3], const Vec3D& ambient_colour, const Vec3D& diffuse_colour)
+{
+  RGB565 colour = get_lit_colour(triangle_normal(v), ambient_colour, diffuse_colour);
+  graphics.set_pen(colour);
+}
+
 void draw_cube(float theta, float phi) {
   Vec3D cube[8] = {
     { 1, 1, 1 },
@@ -225,6 +258,8 @@ void draw_cube(float theta, float phi) {
 int main() {
   stdio_init_all();
 
+  //sleep_ms(5000);
+
   st7789.set_backlight(255);
 
   Pen WHITE = graphics.create_pen(255, 255, 255);
@@ -233,6 +268,13 @@ int main() {
   Pen BLUE = graphics.create_pen(0, 0, 255);
   Pen BG = graphics.create_pen(120, 40, 60);
 
+  Vec3D ambient_colour = make_vec_colour(RGB(0, 0, 0), ambient_proportion);
+  Vec3D diffuse_white = make_vec_colour(RGB(255, 255, 255), diffuse_proportion);
+  Vec3D diffuse_red = make_vec_colour(RGB(255, 0, 0), diffuse_proportion);
+  Vec3D diffuse_green = make_vec_colour(RGB(0, 255, 0), diffuse_proportion);
+  Vec3D diffuse_blue = make_vec_colour(RGB(0, 0, 255), diffuse_proportion);
+  printf("%d %d %d %d\n", diffuse_proportion, diffuse_white.x, diffuse_white.y, diffuse_white.z);
+
   uint8_t i = 0;
 
   graphics.set_pen(BG);
@@ -240,9 +282,9 @@ int main() {
   st7789.update(&graphics);
 
   Vec3D tri[3] = {
-    { -1, 0, 4 },
-    { 0, -1, 4 },
-    { 0, 0, 4 }
+    { 0, 1, 4 },
+    { 1, 0, 4 },
+    { 0, 0, 3 }
   };
 
 #if 0
@@ -267,25 +309,25 @@ int main() {
     tri[0].y = sinf(phi);
     tri[1].x = cosf(phi + 1.1f);
     tri[1].y = sinf(phi + 1.1f);
-    graphics.set_pen(WHITE);
+    set_colour_for_tri(tri, ambient_colour, diffuse_white);
     fill_triangle(tri);
 
     tri[0] = tri[1];
     tri[1].x = cosf(phi + 2.2f);
     tri[1].y = sinf(phi + 2.2f);
-    graphics.set_pen(RED);
+    set_colour_for_tri(tri, ambient_colour, diffuse_red);
     fill_triangle(tri);
 
     tri[0] = tri[1];
     tri[1].x = cosf(phi + 3.3f);
     tri[1].y = sinf(phi + 3.3f);
-    graphics.set_pen(GREEN);
+    set_colour_for_tri(tri, ambient_colour, diffuse_green);
     fill_triangle(tri);
 
     tri[0] = tri[1];
     tri[1].x = cosf(phi + 4.4f);
     tri[1].y = sinf(phi + 4.4f);
-    graphics.set_pen(BLUE);
+    set_colour_for_tri(tri, ambient_colour, diffuse_blue);
     fill_triangle(tri);
 
     st7789.update(&graphics);

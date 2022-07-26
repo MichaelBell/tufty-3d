@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cmath>
+#include "pico/float.h"
 
 template <int PT>
 struct fixed_pt
@@ -15,11 +16,11 @@ struct fixed_pt
         : val((i << PT) | frac)
     {}
     fixed_pt(const float f)
-        : val(f * exp2f(PT))
+        : val(float2fix(f, PT))
     {}
 
     explicit operator int() const { return val >> PT; }
-    explicit operator float() const { return float(val) * exp2f(-PT); }
+    explicit operator float() const { return fix2float(val, PT); }
 };
 
 template <int PT>
@@ -165,4 +166,29 @@ template <int PT>
 inline bool operator!=(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
 {
     return a.val != b.val;
+}
+
+template <int PT>
+inline fixed_pt<PT> sqrt(const fixed_pt<PT>& a)
+{
+    static_assert((PT & 1) == 0, "PT must be even");
+
+    int q = 1;
+    while (q <= a.val) q <<= 2;
+
+    int r = 0;
+    int x = a.val;
+    while (q > 1) {
+        q >>= 2;
+        int t = x - r - q;
+        r >>= 1;
+        if (t >= 0) {
+            x = t;
+            r += q;
+        }
+    }
+
+    fixed_pt<PT> rv;
+    rv.val = r << (PT >> 1);
+    return rv;
 }
