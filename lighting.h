@@ -17,4 +17,4 @@ inline Material make_material_for_colour(const pimoroni::RGB& colour,
     };
 }
 
-void set_colour_for_tri(const Triangle& tri, const Material& mat);
+void set_colour_for_normal(const Vec3D& norm, const Material& mat);

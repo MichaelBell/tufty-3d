@@ -59,111 +59,6 @@ void draw_triangle(const Vec3D (&v)[3]) {
   graphics.line(w[2], w[0]);
 }
 
-void fill_triangle(const Vec3D (&v)[3]) {
-  Vec2D w[3];
-  for (int i = 0; i < 3; ++i) {
-    w[i] = project_vertex(v[i]);
-  }
-
-  // Order points so first has least y coord, and second has lower x coord than third
-  struct RasterPoint
-  {
-    fixed_t x;
-    int y;
-    RasterPoint() = default;
-    RasterPoint(const Vec2D& v)
-      : x(v.x)
-      , y(v.y)
-    {}
-  } wo[3];
-  if (w[0].y < w[1].y && w[0].y < w[2].y) {
-    wo[0] = w[0];
-    if (w[1].x < w[2].x) {
-      wo[1] = w[1];
-      wo[2] = w[2];
-    } else {
-      wo[1] = w[2];
-      wo[2] = w[1];
-    }
-  } else if (w[1].y < w[0].y && w[1].y < w[2].y) {
-    wo[0] = w[1];
-    if (w[0].x < w[2].x) {
-      wo[1] = w[0];
-      wo[2] = w[2];
-    } else {
-      wo[1] = w[2];
-      wo[2] = w[0];
-    }
-  }
-  else {
-    wo[0] = w[2];
-    if (w[0].x < w[1].x) {
-      wo[1] = w[0];
-      wo[2] = w[1];
-    } else {
-      wo[1] = w[1];
-      wo[2] = w[0];
-    }
-  }
-
-  int end_y = max(wo[1].y, wo[2].y);
-
-  if (wo[0].y == end_y) {
-    int start_x(min(wo[0].x, wo[1].x));
-    int end_x(max(wo[0].x, wo[2].x));
-    graphics.pixel_span(Point(start_x, wo[0].y), end_x - start_x + 1);
-    return;
-  }
-
-  fixed_t start_x = wo[0].x;
-  fixed_t end_x = wo[0].x;
-  fixed_t grad_start_x = 0;
-  fixed_t grad_end_x = 0;
-  if (wo[1].y > wo[0].y) {
-    grad_start_x = (wo[1].x - wo[0].x) / (wo[1].y - wo[0].y);
-  }
-  if (wo[2].y > wo[0].y) {
-    grad_end_x = (wo[2].x - wo[0].x) / (wo[2].y - wo[0].y);
-  }
-
-  bool new_start = true;
-  bool new_end = true;
-  for (int y = wo[0].y; y <= end_y; ++y) {
-    if (y != end_y && wo[1].y == y) {
-      start_x = wo[1].x;
-      if (wo[2].y > y) {
-        grad_start_x = (wo[2].x - start_x) / (wo[2].y - y);
-        new_start = true;
-      }
-    }
-    else {
-      if (new_start) {
-        start_x += grad_start_x >> 1;
-        new_start = false;
-      } else {
-        start_x += grad_start_x;
-      }
-    }
-    if (y != end_y && wo[2].y == y) {
-      end_x = wo[2].x;
-      if (wo[1].y > y) {
-        grad_end_x = (wo[1].x - end_x) / (wo[1].y - y);
-        new_end = true;
-      }
-    }
-    else {
-      if (new_end) {
-        end_x += grad_end_x >> 1;
-        new_end = false;
-      } else {
-        end_x += grad_end_x;
-      }
-    }
-
-    graphics.pixel_span(Point(int(start_x), y), int(end_x - start_x) + 1);
-  }
-}
-
 void draw_cube(float theta, float phi) {
   Vec3D cube[8] = {
     { 1, 1, 1 },
@@ -296,13 +191,31 @@ int main() {
   }
 #endif
 
-  graphics.set_pen(BG);
-  graphics.clear();
+  Model& teapot_model = get_rduck_model();
+  Matrix<3, 3> orient = mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+  float x = 0;
 
+  absolute_time_t start_time = get_absolute_time();
+  while (true)
+  {
+    graphics.set_pen(BG);
+    graphics.clear();
 
-  Model& teapot_model = get_teapot_model();
-  render_model(teapot_model);
-  st7789.update(&graphics);
+    render_model(teapot_model, Vec3D { 0, -3, 10 }, orient);
+
+    absolute_time_t end_time = get_absolute_time();
+    int64_t frame_time_us = absolute_time_diff_us(start_time, end_time);
+    start_time = end_time;
+
+    char buf[20];
+    sprintf(buf, "FPS: %d", 1000000 / frame_time_us);
+    graphics.set_pen(WHITE);
+    graphics.text(buf, Point(240, 6), Tufty2040::WIDTH);
+
+    st7789.update(&graphics);
+    orient = /*mat_roll(x * 0.25f) * */ mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+    x += 0.02f;
+  }
 
   return 0;
 }

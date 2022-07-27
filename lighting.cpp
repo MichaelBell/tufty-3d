@@ -23,9 +23,9 @@ RGB565 get_lit_colour(const Vec3D& normal, const Vec3D& ambient_colour, const Ve
                            ((colour.z.val >> (FIXED_PT_PREC + 3)) & 0x001f));
 }
 
-void set_colour_for_tri(const Triangle& tri, const Material& mat)
+void set_colour_for_normal(const Vec3D& norm, const Material& mat)
 {
-  RGB565 colour = get_lit_colour(tri.normal, mat.ambient_colour, mat.diffuse_colour);
+  RGB565 colour = get_lit_colour(norm, mat.ambient_colour, mat.diffuse_colour);
   graphics.set_pen(colour);
 }
 

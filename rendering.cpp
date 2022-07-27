@@ -37,10 +37,10 @@ bool is_back_face(const Vec2D (&w)[3]) {
   return (a.x * b.y >= a.y * b.x);
 }
 
-void fill_triangle(const Vec3D* vertices, const Triangle& tri) {
+void fill_triangle(const Vec3D (&v)[3]) {
   Vec2D w[3];
   for (int i = 0; i < 3; ++i) {
-    w[i] = project_vertex(vertices[tri.vert_idx[i]]);
+    w[i] = project_vertex(v[i]);
   }
 
   if (is_back_face(w)) return;
@@ -87,6 +87,7 @@ void fill_triangle(const Vec3D* vertices, const Triangle& tri) {
   }
 
   int end_y = min(max(wo[1].y, wo[2].y), Tufty2040::HEIGHT - 1);
+  if (end_y < 0) return;
 
   if (wo[0].y == end_y) {
     int start_x(min(wo[0].x, wo[1].x));
@@ -97,13 +98,23 @@ void fill_triangle(const Vec3D* vertices, const Triangle& tri) {
 
   fixed_t start_x = wo[0].x;
   fixed_t end_x = wo[0].x;
-  fixed_t grad_start_x = 0;
-  fixed_t grad_end_x = 0;
+  fixed_t grad_start_x;
+  fixed_t grad_end_x;
   if (wo[1].y > wo[0].y) {
     grad_start_x = (wo[1].x - wo[0].x) / (wo[1].y - wo[0].y);
+  } else {
+    grad_start_x = wo[1].x - wo[0].x;
   }
+
   if (wo[2].y > wo[0].y) {
     grad_end_x = (wo[2].x - wo[0].x) / (wo[2].y - wo[0].y);
+  } else {
+    grad_end_x = wo[2].x - wo[0].x;
+  }
+  if (grad_start_x > grad_end_x)
+  {
+    std::swap(grad_start_x, grad_end_x);
+    std::swap(wo[1], wo[2]);
   }
 
   bool new_start = true;
@@ -154,8 +165,29 @@ void render_model(const Model& model)
 {
     for (uint16_t i = 0; i < model.num_triangles; ++i)
     {
+        Vec3D v[3];
         Triangle& tri = model.triangles[i];
-        set_colour_for_tri(tri, model.materials[tri.mat_idx]);
-        fill_triangle(model.vertices, tri);
+        set_colour_for_normal(tri.normal, model.materials[tri.mat_idx]);
+
+        v[0] = model.vertices[tri.vert_idx[0]];
+        v[1] = model.vertices[tri.vert_idx[1]];
+        v[2] = model.vertices[tri.vert_idx[2]];
+        fill_triangle(v);
+    }
+}
+
+void render_model(const Model& model, const Vec3D& position, const Matrix<3, 3>& orientation)
+{
+    for (uint16_t i = 0; i < model.num_triangles; ++i)
+    {
+        Triangle& tri = model.triangles[i];
+        Vec3D normal = orientation * tri.normal;
+        set_colour_for_normal(normal, model.materials[tri.mat_idx]);
+
+        Vec3D v[3];
+        v[0] = orientation * model.vertices[tri.vert_idx[0]] + position;
+        v[1] = orientation * model.vertices[tri.vert_idx[1]] + position;
+        v[2] = orientation * model.vertices[tri.vert_idx[2]] + position;
+        fill_triangle(v);
     }
 }
