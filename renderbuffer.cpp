@@ -133,7 +133,7 @@ namespace
 void RenderBuffer::set_pixel_span(const Point& p, uint _l)
 {
     int l = _l;
-    if (l > 4 * width_per_run)
+    if (l >= 4 * width_per_run)
     {
         // Break the run into chunks
         Point pt(p);
@@ -158,18 +158,13 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
     }
 
     // Ignore any runs at less depth
-    while (run[i].depth < depth && l > 0)
+    while (run[i].depth < depth)
     {
         l -= run[i].run_length - x;
-        x = 0;
-        if (++i == RUNS_PER_LINE) {
+        if (l <= 0 || ++i == RUNS_PER_LINE) {
             return;
         }
-    }
-
-    if (l <= 0)
-    {
-        return;
+        x = 0;
     }
 
     while (run[i].run_length == 0 && i < RUNS_PER_LINE - 1)
@@ -256,7 +251,6 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
         int modified_i = i;
         for (++i; i < RUNS_PER_LINE; ++i)
         {
-            #if 1
             if (run[i].depth < depth)
             {
                 run[modified_i].run_length -= l;
@@ -266,7 +260,6 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
                 }
                 return;
             }
-            #endif
 
             if (run[i].run_length >= l)
             {

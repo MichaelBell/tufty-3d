@@ -101,6 +101,9 @@ void fill_triangle(const Vec3D (&v)[3]) {
     return;
   }
 
+  int min_x = min(0, int(min(wo[0].x, wo[1].x)));
+  int max_x = max(Tufty2040::WIDTH - 1, int(max(wo[0].x, wo[2].x)));
+
   fixed_t start_x = wo[0].x;
   fixed_t end_x = wo[0].x;
   fixed_t grad_start_x;
@@ -157,10 +160,11 @@ void fill_triangle(const Vec3D (&v)[3]) {
     }
 
     if (y >= 0) {
-      const int clamped_start_x = max(0, int(start_x));
-      const int clamped_len = min(Tufty2040::WIDTH - 1 - clamped_start_x, int(end_x - start_x) + 1);
+      const int clamped_start_x = max(int(start_x), min_x);
+      const int clamped_end_x = min(int(end_x), max_x);
+      const int clamped_len(clamped_end_x - clamped_start_x + 1);
       if (clamped_len > 0) {
-        graphics.pixel_span(Point(clamped_start_x, y), clamped_len);
+        graphics.pixel_span(Point(int(clamped_start_x), y), clamped_len);
       }
     }
   }
