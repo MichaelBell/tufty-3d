@@ -101,7 +101,7 @@ void draw_cube(float theta, float phi) {
 int main() {
   stdio_init_all();
 
-  sleep_ms(5000);
+  //sleep_ms(5000);
 
   st7789.set_backlight(255);
 

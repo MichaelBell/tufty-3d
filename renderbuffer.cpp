@@ -198,7 +198,7 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
         run[i].run_length = x;
 
         ++i;
-        if (l < remainder)
+        if (l < remainder || run[i].depth < depth)
         {
             // The existing run needs to continue after the new run, try to find space for it
             if (run[i].run_length == 0)
@@ -226,7 +226,6 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
         {
             // The existing run will be covered by the new run, temporarily just add the length to the next run
             // to maintain overall length.
-            // TODO: This doesn't work if the depth of the next run is less than the depth of the new run
             run[i].run_length += remainder;
         }
 
@@ -246,17 +245,33 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
     }
     else
     {
-        run[i].run_length += l;
+        l -= run[i].run_length - x;
+        if (l > 0) {
+            run[i].run_length += l;
+        }
     }    
 
     if (l > 0)
     {
+        int modified_i = i;
         for (++i; i < RUNS_PER_LINE; ++i)
         {
+            #if 1
+            if (run[i].depth < depth)
+            {
+                run[modified_i].run_length -= l;
+                l -= run[i].run_length;
+                if (l > 0) {
+                    set_pixel_span(Point(p.x + _l - l, p.y), l);
+                }
+                return;
+            }
+            #endif
+
             if (run[i].run_length >= l)
             {
                 run[i].run_length -= l;
-                break;
+                return;
             }
 
             l -= run[i].run_length;
