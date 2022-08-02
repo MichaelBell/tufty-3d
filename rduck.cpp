@@ -1,6 +1,7 @@
 // This is the free rubber duck model from https://free3d.com/3d-model/rubber-duck-v1--250409.html
 // Reduced to 400 faces in MeshLab
 
+#include "common.h"
 #include "model.h"
 #include "lighting.h"
 

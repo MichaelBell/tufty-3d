@@ -13,15 +13,13 @@
 #include "tufty2040.hpp"
 #include "button.hpp"
 
+#include "common.h"
 #include "vector.h"
 #include "lighting.h"
 #include "rendering.h"
 #include "teapot.h"
 
 using namespace pimoroni;
-
-using std::min;
-using std::max;
 
 Tufty2040 tufty;
 
@@ -39,7 +37,7 @@ ST7789 st7789(
   }
 );
 
-PicoGraphics_PenRGB565 graphics(st7789.width, st7789.height, nullptr);
+RenderBuffer graphics(st7789.width, st7789.height, nullptr);
 
 Button button_a(Tufty2040::A);
 Button button_b(Tufty2040::B);
@@ -103,7 +101,7 @@ void draw_cube(float theta, float phi) {
 int main() {
   stdio_init_all();
 
-  //sleep_ms(5000);
+  sleep_ms(5000);
 
   st7789.set_backlight(255);
 
@@ -121,8 +119,12 @@ int main() {
   uint8_t i = 0;
 
   graphics.set_pen(BG);
+  graphics.set_depth(255);
+  printf("Clearing\n");
   graphics.clear();
+  printf("Update display\n");
   st7789.update(&graphics);
+  printf("Start render loop\n");
 
 #if 0
   float phi = 0;
@@ -191,17 +193,24 @@ int main() {
   }
 #endif
 
+#if 0
   Model& teapot_model = get_rduck_model();
   Matrix<3, 3> orient = mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+#else
+  Model& teapot_model = get_teapot_model();
+  Matrix<3, 3> orient = MAT_IDENTITY;
+#endif
   float x = 0;
 
   absolute_time_t start_time = get_absolute_time();
   while (true)
   {
     graphics.set_pen(BG);
+    graphics.set_depth(255);
     graphics.clear();
 
-    render_model(teapot_model, Vec3D { 0, -3, 10 }, orient);
+    //render_model(teapot_model, Vec3D { 0, -3, 10 }, orient);
+    render_model(teapot_model, Vec3D { 0, 0, 6 }, orient);
 
     absolute_time_t end_time = get_absolute_time();
     int64_t frame_time_us = absolute_time_diff_us(start_time, end_time);
@@ -209,11 +218,14 @@ int main() {
 
     char buf[20];
     sprintf(buf, "FPS: %d", 1000000 / frame_time_us);
+    printf("%s\n", buf);
     graphics.set_pen(WHITE);
+    graphics.set_depth(0);
     graphics.text(buf, Point(240, 6), Tufty2040::WIDTH);
 
     st7789.update(&graphics);
-    orient = /*mat_roll(x * 0.25f) * */ mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+    //orient = /*mat_roll(x * 0.25f) * */ mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+    orient = mat_yaw(x);
     x += 0.02f;
   }
 

@@ -1,12 +1,7 @@
+#include "common.h"
 #include "lighting.h"
-#include "libraries/pico_graphics/pico_graphics.hpp"
 
 using namespace pimoroni;
-
-using std::min;
-using std::max;
-
-extern PicoGraphics_PenRGB565 graphics;
 
 Vec3D light_direction = Normalize(Vec3D{ 1, 1, -1 });
 

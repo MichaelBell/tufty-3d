@@ -1,5 +1,6 @@
 // Teapot is the standard Utah teapot reduced to 400 faces in MeshLab
 
+#include "common.h"
 #include "model.h"
 #include "lighting.h"
 

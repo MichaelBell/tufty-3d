@@ -177,16 +177,12 @@ inline bool operator!=(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
     return a.val != b.val;
 }
 
-template <int PT>
-inline fixed_pt<PT> sqrt(const fixed_pt<PT>& a)
+inline int isqrt(int x)
 {
-    static_assert((PT & 1) == 0, "PT must be even");
-
     int q = 1;
-    while (q <= a.val) q <<= 2;
+    while (q <= x) q <<= 2;
 
     int r = 0;
-    int x = a.val;
     while (q > 1) {
         q >>= 2;
         int t = x - r - q;
@@ -196,6 +192,16 @@ inline fixed_pt<PT> sqrt(const fixed_pt<PT>& a)
             r += q;
         }
     }
+
+    return r;
+}
+
+template <int PT>
+inline fixed_pt<PT> sqrt(const fixed_pt<PT>& a)
+{
+    static_assert((PT & 1) == 0, "PT must be even");
+
+    const int r = isqrt(a.val);
 
     fixed_pt<PT> rv;
     rv.val = r << (PT >> 1);

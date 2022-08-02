@@ -1,15 +1,8 @@
-#include "tufty2040.hpp"
-#include "libraries/pico_graphics/pico_graphics.hpp"
-
+#include "common.h"
 #include "rendering.h"
 #include "lighting.h"
 
 using namespace pimoroni;
-
-using std::min;
-using std::max;
-
-extern PicoGraphics_PenRGB565 graphics;
 
 const Vec2D screen_size { Tufty2040::WIDTH, Tufty2040::HEIGHT };
 const Vec2D half_screen_size = screen_size >> 1;
@@ -37,6 +30,16 @@ bool is_back_face(const Vec2D (&w)[3]) {
   return (a.x * b.y >= a.y * b.x);
 }
 
+void set_depth_for_triangle(const Vec3D (&v)[3]) {
+  fixed_t z = v[0].z + v[1].z + v[2].z;
+  int d = z.val >> (FIXED_PT_PREC - 8);
+  if (d > 254 * 254) d = 254;
+  else if (d > 3) d = isqrt(d);
+  else d = 1;
+
+  graphics.set_depth(d);
+}
+
 void fill_triangle(const Vec3D (&v)[3]) {
   Vec2D w[3];
   for (int i = 0; i < 3; ++i) {
@@ -44,6 +47,8 @@ void fill_triangle(const Vec3D (&v)[3]) {
   }
 
   if (is_back_face(w)) return;
+
+  set_depth_for_triangle(v);
 
   // Order points so first has least y coord, and second has lower x coord than third
   struct RasterPoint

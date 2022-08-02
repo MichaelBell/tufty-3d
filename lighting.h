@@ -1,7 +1,6 @@
 #pragma once
 
 #include "model.h"
-#include "libraries/pico_graphics/pico_graphics.hpp"
 
 constexpr fixed_t default_ambient_proportion { 0.2f };
 constexpr fixed_t default_diffuse_proportion { 0.8f };
