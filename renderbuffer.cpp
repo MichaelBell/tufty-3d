@@ -47,9 +47,87 @@ void RenderBuffer::set_pixel(const Point &p)
     set_pixel_span(p, 1);
 }
 
-bool run_is_same(const PixelRun& a, const PixelRun& b)
+namespace
 {
-    return a.colour == b.colour && a.depth == b.depth;
+    bool run_is_same(const PixelRun& a, const PixelRun& b)
+    {
+        return a.colour == b.colour && a.depth == b.depth;
+    }
+
+    bool make_space_at(PixelRun* run, int& i)
+    {
+        if (i > 0 && run[i-1].run_length == 0)
+        {
+            --i;
+        }
+        else if (i > 1 && run[i-2].run_length == 0)
+        {
+            run[i-2] = run[i-1];
+            --i;
+            run[i].run_length = 0;
+        }
+        else if (i > 1 && run_is_same(run[i-1], run[i-2]))
+        {
+            run[i-2].run_length += run[i-1].run_length;
+            --i;
+            run[i].run_length = 0;
+        }
+        else if (i < RenderBuffer::RUNS_PER_LINE - 1 && run[i+1].run_length == 0)
+        {
+            run[i+1] = run[i];
+            run[i].run_length = 0;
+        }
+        else if (i < RenderBuffer::RUNS_PER_LINE - 1 && run_is_same(run[i], run[i+1]))
+        {
+            // Can collapse current into the next run
+            run[i+1].run_length += run[i].run_length;
+            run[i].run_length = 0;
+        }
+        else
+        {
+            // Look for next collapsable run
+            for (int dist = 2, max_dist = max(RenderBuffer::RUNS_PER_LINE - i, i - 1); dist < max_dist; ++dist)
+            {
+                if (i + dist < RenderBuffer::RUNS_PER_LINE)
+                {
+                    if (run[i + dist].run_length == 0)
+                    {
+                        for (int j = i + dist; j > i; --j) run[j] = run[j-1];
+                        run[i].run_length = 0;
+                        return true;
+                    }
+                    if (run_is_same(run[i + dist - 1], run[i + dist]))
+                    {
+                        run[i + dist].run_length += run[i + dist - 1].run_length;
+                        for (int j = i + dist - 1; j > i; --j) run[j] = run[j-1];
+                        run[i].run_length = 0;
+                        return true;
+                    }
+                }
+                if (i - dist > 0)
+                {
+                    if (run[i - dist - 1].run_length == 0)
+                    {
+                        --i;
+                        for (int j = i - dist; j < i; ++j) run[j] = run[j+1];
+                        run[i].run_length = 0;
+                        return true;
+                    }
+                    if (run_is_same(run[i - dist - 1], run[i - dist]))
+                    {
+                        run[i - dist - 1].run_length += run[i - dist].run_length;
+                        --i;
+                        for (int j = i - dist + 1; j < i; ++j) run[j] = run[j+1];
+                        run[i].run_length = 0;
+                        return true;
+                    }
+                }
+            }
+            return false;
+        }
+
+        return true;
+    }
 }
 
 void RenderBuffer::set_pixel_span(const Point& p, uint _l)
@@ -72,24 +150,14 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
     PixelRun* run = get_run(p.y, 0);
     int i;
     int x = p.x;
-    int last_same = -1;
-    int last_zero = -1;
 
     // Find the correct position to insert the run
     for (i = 0; x - run[i].run_length >= 0 && i < RUNS_PER_LINE - 1; ++i)
     {
-        if (run[i].run_length == 0)
-        {
-            last_zero = i;
-        }
-        else if (run[i+1].run_length > 0 && run_is_same(run[i], run[i+1]))
-        {
-            last_same = i;
-        }
-
         x -= run[i].run_length;
     }
 
+    // Ignore any runs at less depth
     while (run[i].depth < depth && l > 0)
     {
         l -= run[i].run_length - x;
@@ -109,126 +177,77 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
         ++i;
     }
 
-    if (run[i].run_length > x)
+    if (run[i].colour != colour || run[i].depth != depth)
     {
+        // Aim now is to be pointing to the beginning of an existing run that we can overwrite
+        assert(run[i].run_length > x);
+
+        if (i == RUNS_PER_LINE - 1)
+        {
+            if (!make_space_at(run, i))
+            {
+                return;
+            }
+            assert(i < RUNS_PER_LINE - 1);
+            run[i] = run[i+1];
+            run[i+1].run_length = 0;
+        }
+
+        // Clip off the end of this run, if the new run needs to start in the middle of it
         const int remainder = run[i].run_length - x;
         run[i].run_length = x;
 
-        if (i < RUNS_PER_LINE - 1)
+        ++i;
+        if (l < remainder)
         {
-            if (l < remainder)
+            // The existing run needs to continue after the new run, try to find space for it
+            if (run[i].run_length == 0)
             {
-                if (run[i+1].run_length == 0)
-                {
-                    run[i+1] = run[i];
-                    run[i+1].run_length = remainder;
-                }
-                else if (run_is_same(run[i], run[i+1]))
-                {
-                    run[i+1].run_length += remainder;
-                }
-                else
-                {
-                    // TODO Need to collapse a run to add in a new run for the second half of the old run
-                    return;
-                }
+                run[i] = run[i-1];
+                run[i].run_length = remainder;
+            }
+            else if (run_is_same(run[i-1], run[i]))
+            {
+                run[i].run_length += remainder;
             }
             else
             {
-                ++i;
-                run[i].run_length += remainder;
+                PixelRun tmp = run[i-1];
+                tmp.run_length = remainder;
+                if (!make_space_at(run, i))
+                {
+                    run[i-1].run_length += remainder;
+                    return;
+                }
+                run[i] = tmp;
             }
         }
         else
         {
-            // TODO Need to collapse a previous run to sort this out
-            return;
+            // The existing run will be covered by the new run, temporarily just add the length to the next run
+            // to maintain overall length.
+            // TODO: This doesn't work if the depth of the next run is less than the depth of the new run
+            run[i].run_length += remainder;
         }
+
+        if (run[i].run_length > l)
+        {
+            // Existing run will continue after the new run,
+            // make space for the new run
+            if (!make_space_at(run, i)) return;
+        }
+
+        int old_run_length = run[i].run_length;
+        assert(old_run_length <= l);
+        run[i].colour = colour;
+        run[i].depth = depth;
+        run[i].run_length = l;
+        l -= old_run_length;
     }
     else
     {
-        assert(i == RUNS_PER_LINE - 1);
-        if (run[i].run_length > 0)
-        {
-            if (last_zero == i-1)
-            {
-                run[i-1] = run[i];
-                run[i].run_length = 0;
-            }
-            else if (last_same == i-1)
-            {
-                run[i-1].run_length += run[i].run_length;
-                run[i].run_length = 0;
-            }
-            else
-            {
-                // TODO
-                return;
-            }
-        }
-    }
-
-    if (run[i].run_length > l)
-    {
-        // Make space for the new run
-        if (i > 0 && run[i-1].run_length == 0)
-        {
-            --i;
-        }
-        else if (i > 1 && run[i-2].run_length == 0)
-        {
-            run[i-2] = run[i-1];
-            --i;
-            run[i].run_length = 0;
-        }
-        else if (i > 1 && run_is_same(run[i-1], run[i-2]))
-        {
-            run[i-2].run_length += run[i-1].run_length;
-            --i;
-            run[i].run_length = 0;
-        }
-        else if (i < RUNS_PER_LINE - 1 && run[i+1].run_length == 0)
-        {
-            run[i+1] = run[i];
-            run[i].run_length = 0;
-        }
-        else if (i < RUNS_PER_LINE - 1 && run_is_same(run[i], run[i+1]))
-        {
-            // Can collapse current into the next run
-            run[i+1].run_length += run[i].run_length;
-            run[i].run_length = 0;
-        }
-        else
-        {
-            // Look for next collapsable run
-            // TODO
-            return;
-#if 0
-            const int dist_to_last = (last_same != -1) ? i - last_same : RUNS_PER_LINE;
-            const int cutoff = min(RUNS_PER_LINE - 2, i + dist_to_last);
-            int next_same;
-            for (next_same = i+1; next_same < RUNS_PER_LINE - 2; ++next_same)
-            {
-                if (run_is_same(run[next_same], run[next_same+1]))
-                {
-                    break;
-                }
-            }
-
-            if (next_same < cutoff)
-            {
-                // Can collapse at next_same and then move entries between up
-            }
-#endif
-        }
-    }
-
-    int old_run_length = run[i].run_length;
-    assert(old_run_length <= l);
-    run[i].colour = colour;
-    run[i].depth = depth;
-    run[i].run_length = l;
-    l -= old_run_length;
+        run[i].run_length += l;
+    }    
 
     if (l > 0)
     {
