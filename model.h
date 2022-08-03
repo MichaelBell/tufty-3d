@@ -5,8 +5,10 @@
 
 struct Triangle
 {
-    uint8_t vert_idx[3];
-    uint8_t mat_idx;
+    uint32_t vert_idx_0 : 9;
+    uint32_t vert_idx_1 : 9;
+    uint32_t vert_idx_2 : 9;
+    uint32_t mat_idx : 5;
     Vec3D normal;
 };
 
@@ -21,9 +23,9 @@ struct Model
     Vec3D* vertices;
     Triangle* triangles;
     Material* materials;
-    uint8_t num_vertices;
-    uint8_t num_materials;
+    uint16_t num_vertices;
     uint16_t num_triangles;
+    uint8_t num_materials;
 };
 
 void set_triangle_normals(Model& model);

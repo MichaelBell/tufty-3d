@@ -177,9 +177,9 @@ void render_model(const Model& model)
         Triangle& tri = model.triangles[i];
         set_colour_for_normal(tri.normal, model.materials[tri.mat_idx]);
 
-        v[0] = model.vertices[tri.vert_idx[0]];
-        v[1] = model.vertices[tri.vert_idx[1]];
-        v[2] = model.vertices[tri.vert_idx[2]];
+        v[0] = model.vertices[tri.vert_idx_0];
+        v[1] = model.vertices[tri.vert_idx_1];
+        v[2] = model.vertices[tri.vert_idx_2];
         fill_triangle(v);
     }
 }
@@ -193,9 +193,9 @@ void render_model(const Model& model, const Vec3D& position, const Matrix<3, 3>&
         set_colour_for_normal(normal, model.materials[tri.mat_idx]);
 
         Vec3D v[3];
-        v[0] = orientation * model.vertices[tri.vert_idx[0]] + position;
-        v[1] = orientation * model.vertices[tri.vert_idx[1]] + position;
-        v[2] = orientation * model.vertices[tri.vert_idx[2]] + position;
+        v[0] = orientation * model.vertices[tri.vert_idx_0] + position;
+        v[1] = orientation * model.vertices[tri.vert_idx_1] + position;
+        v[2] = orientation * model.vertices[tri.vert_idx_2] + position;
         fill_triangle(v);
     }
 }

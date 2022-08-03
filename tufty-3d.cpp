@@ -213,7 +213,7 @@ int main() {
 #ifdef RDUCK
     render_model(teapot_model, Vec3D { 0, -3, 10 }, orient);
 #else
-    render_model(teapot_model, Vec3D { 0, 0, 6 }, orient);
+    render_model(teapot_model, Vec3D { 0, -2, 6 }, orient);
 #endif
 
     absolute_time_t end_time = get_absolute_time();
