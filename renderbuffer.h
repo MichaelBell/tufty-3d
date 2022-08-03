@@ -1,10 +1,13 @@
 #pragma once
 
-struct PixelRun
+union PixelRun
 {
-    pimoroni::RGB565 colour;
-    uint8_t run_length;
-    uint8_t depth;
+    struct {
+        pimoroni::RGB565 colour;
+        uint8_t run_length;
+        uint8_t depth;
+    };
+    uint32_t val;
 };
 
 struct RenderBuffer : public pimoroni::PicoGraphics
@@ -25,10 +28,6 @@ struct RenderBuffer : public pimoroni::PicoGraphics
     void set_pixel(const pimoroni::Point &p) override;
     void set_pixel_span(const pimoroni::Point &p, uint l) override;
     void scanline_convert(PenType type, conversion_callback_func callback) override;
-
-    static size_t buffer_size(uint w, uint h) {
-        return h * RUNS_PER_LINE * sizeof(PixelRun);
-    }
 
 private:
     PixelRun* get_run(int y, int x);

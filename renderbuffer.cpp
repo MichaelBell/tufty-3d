@@ -12,7 +12,7 @@ RenderBuffer::RenderBuffer(uint16_t width, uint16_t height, void *frame_buffer)
 
     pen_type = PEN_1BIT;  // Anything that gets scanline convert called on it.
     if (this->frame_buffer == nullptr) {
-        this->frame_buffer = (void *)(new uint8_t[buffer_size(width, height)]);
+        this->frame_buffer = (void *)(new PixelRun[height * RUNS_PER_LINE]);
     }
 }
 
@@ -28,7 +28,7 @@ void RenderBuffer::clear()
     PixelRun clear_run { colour, (uint8_t)(bounds.w / RUNS_PER_LINE), depth };
     for (int i = 0; i < bounds.h * RUNS_PER_LINE; ++i)
     {
-        run[i] = clear_run;
+        run[i].val = clear_run.val;
     }
 }
 
