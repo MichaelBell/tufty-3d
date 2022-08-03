@@ -221,11 +221,11 @@ int main() {
     start_time = end_time;
 
     char buf[20];
-    sprintf(buf, "FPS: %d", 1000000 / frame_time_us);
+    sprintf(buf, "FPS: %.1f", 1000000.f / frame_time_us);
     printf("%s\n", buf);
     graphics.set_pen(WHITE);
     graphics.set_depth(0);
-    graphics.text(buf, Point(240, 6), Tufty2040::WIDTH);
+    graphics.text(buf, Point(230, 6), Tufty2040::WIDTH);
 
     st7789.update(&graphics);
 #ifdef RDUCK

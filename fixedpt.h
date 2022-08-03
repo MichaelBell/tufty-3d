@@ -3,6 +3,7 @@
 #include <cmath>
 #include <type_traits>
 #include "pico/float.h"
+#include "hardware/divider.h"
 
 template <int PT>
 struct fixed_pt
@@ -66,10 +67,18 @@ template <int PT>
 inline fixed_pt<PT> operator*(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
 {
     fixed_pt<PT> v;
+#if 0
     int64_t a64 = a.val;
     int64_t b64 = b.val;
     int64_t c64 = a64 * b64;
     v.val = c64 >> PT;
+#else
+    int32_t ah = a.val >> 15;
+    int32_t al = a.val & 0x7fff;
+    int32_t bh = b.val >> 15;
+    int32_t bl = b.val & 0x7fff;
+    v.val = ((al * bl) >> PT) + ((ah * bl + al * bh) >> (PT - 15)) + ((ah * bh) << (30 - PT));
+#endif
     return v;
 }
 

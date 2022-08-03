@@ -1,5 +1,6 @@
 #include "common.h"
 #include "renderbuffer.h"
+#include "hardware/dma.h"
 
 using namespace pimoroni;
 
@@ -24,12 +25,24 @@ void RenderBuffer::clear()
         return;
     }
 
-    PixelRun* run = static_cast<PixelRun*>(frame_buffer);
     const PixelRun clear_run { colour, (uint8_t)(bounds.w / RUNS_PER_LINE), depth };
+#if 0
+    PixelRun* run = static_cast<PixelRun*>(frame_buffer);
     for (int i = 0; i < bounds.h * RUNS_PER_LINE; ++i)
     {
         run[i] = clear_run;
     }
+#else
+    int chan = dma_claim_unused_channel(true);
+    dma_channel_config c = dma_channel_get_default_config(chan);
+    channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+    channel_config_set_read_increment(&c, false);
+    channel_config_set_write_increment(&c, true);
+
+    dma_channel_configure(chan, &c, frame_buffer, &clear_run.val, bounds.h * RUNS_PER_LINE, true);
+    dma_channel_wait_for_finish_blocking(chan);
+    dma_channel_unclaim(chan);
+#endif
 }
 
 void RenderBuffer::set_pen(uint8_t r, uint8_t g, uint8_t b)
@@ -152,11 +165,23 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
     int x = p.x;
 
     // Find the correct position to insert the run
-    for (i = 0; x - run[i].run_length >= 0 && i < RUNS_PER_LINE - 1; ++i)
+    if (x > (bounds.w >> 1)) 
     {
-        x -= run[i].run_length;
+        x = bounds.w - x;
+        for (i = RUNS_PER_LINE - 1; x - run[i].run_length >= 0 && i > 0; --i)
+        {
+            x -= run[i].run_length;
+        }
+        x = run[i].run_length - x; 
     }
-
+    else
+    {
+        for (i = 0; x - run[i].run_length >= 0 && i < RUNS_PER_LINE - 1; ++i)
+        {
+            x -= run[i].run_length;
+        }    
+    }
+    
     // Ignore any runs at less depth
     while (run[i].depth < depth)
     {

@@ -12,7 +12,7 @@ const int screen_scale = Tufty2040::WIDTH << 5;
 // Project from camera relative space (Z forward from camera, X right, Y up)
 // into screen space
 Vec2D project_vertex(const Vec3D& v) {
-  const int inv_z = 0x40000000 / v.z.val;
+  const int inv_z = 0x40000000 / v.z.val; //hw_divider_quotient_s32(0x40000000, v.z.val);
   const int scale = screen_scale * inv_z;
   Vec2D rv;
   rv.x.val = scale;
@@ -108,13 +108,13 @@ void fill_triangle(const Vec3D (&v)[3]) {
   fixed_t grad_start_x;
   fixed_t grad_end_x;
   if (wo[1].y > wo[0].y) {
-    grad_start_x = (wo[1].x - wo[0].x) / (wo[1].y - wo[0].y);
+    grad_start_x.val = hw_divider_quotient_s32(wo[1].x.val - wo[0].x.val, wo[1].y - wo[0].y);
   } else {
     grad_start_x = wo[1].x - wo[0].x;
   }
 
   if (wo[2].y > wo[0].y) {
-    grad_end_x = (wo[2].x - wo[0].x) / (wo[2].y - wo[0].y);
+    grad_end_x.val = hw_divider_quotient_s32(wo[2].x.val - wo[0].x.val, wo[2].y - wo[0].y);
   } else {
     grad_end_x = wo[2].x - wo[0].x;
   }
@@ -130,7 +130,7 @@ void fill_triangle(const Vec3D (&v)[3]) {
     if (y != end_y && wo[1].y == y) {
       start_x = wo[1].x;
       if (wo[2].y > y) {
-        grad_start_x = (wo[2].x - start_x) / (wo[2].y - y);
+        grad_start_x.val = hw_divider_quotient_s32(wo[2].x.val - start_x.val, wo[2].y - y);
         new_start = true;
       }
     }
@@ -145,7 +145,7 @@ void fill_triangle(const Vec3D (&v)[3]) {
     if (y != end_y && wo[2].y == y) {
       end_x = wo[2].x;
       if (wo[1].y > y) {
-        grad_end_x = (wo[1].x - end_x) / (wo[1].y - y);
+        grad_end_x.val = hw_divider_quotient_s32(wo[1].x.val - end_x.val, wo[1].y - y);
         new_end = true;
       }
     }
