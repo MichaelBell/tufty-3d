@@ -8,6 +8,12 @@ union PixelRun
         uint8_t depth;
     };
     uint32_t val;
+
+    PixelRun() = default;
+    PixelRun(pimoroni::RGB565 c, uint8_t rl, uint8_t d)
+      : colour(c), run_length(rl), depth(d) {}
+    PixelRun(const PixelRun& other) : val(other.val) {}
+    PixelRun& operator=(const PixelRun& other) { val = other.val; return *this; }
 };
 
 struct RenderBuffer : public pimoroni::PicoGraphics

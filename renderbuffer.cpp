@@ -25,10 +25,10 @@ void RenderBuffer::clear()
     }
 
     PixelRun* run = static_cast<PixelRun*>(frame_buffer);
-    PixelRun clear_run { colour, (uint8_t)(bounds.w / RUNS_PER_LINE), depth };
+    const PixelRun clear_run { colour, (uint8_t)(bounds.w / RUNS_PER_LINE), depth };
     for (int i = 0; i < bounds.h * RUNS_PER_LINE; ++i)
     {
-        run[i].val = clear_run.val;
+        run[i] = clear_run;
     }
 }
 
