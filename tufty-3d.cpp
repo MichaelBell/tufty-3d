@@ -109,7 +109,7 @@ int main() {
   Pen RED = graphics.create_pen(255, 0, 0);
   Pen GREEN = graphics.create_pen(0, 255, 0);
   Pen BLUE = graphics.create_pen(0, 0, 255);
-  Pen BG = graphics.create_pen(120, 40, 60);
+  Pen BG = graphics.create_pen(40, 60, 120);
 
   Material mat_white = make_material_for_colour(RGB(255, 255, 255));
   Material mat_red = make_material_for_colour(RGB(255, 0, 0));
@@ -193,7 +193,7 @@ int main() {
   }
 #endif
 
-#if 0
+#ifdef RDUCK
   Model& teapot_model = get_rduck_model();
   Matrix<3, 3> orient = mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
 #else
@@ -201,6 +201,7 @@ int main() {
   Matrix<3, 3> orient = MAT_IDENTITY;
 #endif
   float x = 0;
+  float inc = 0.01f;
 
   absolute_time_t start_time = get_absolute_time();
   while (true)
@@ -209,8 +210,11 @@ int main() {
     graphics.set_depth(255);
     graphics.clear();
 
-    //render_model(teapot_model, Vec3D { 0, -3, 10 }, orient);
+#ifdef RDUCK
+    render_model(teapot_model, Vec3D { 0, -3, 10 }, orient);
+#else
     render_model(teapot_model, Vec3D { 0, 0, 6 }, orient);
+#endif
 
     absolute_time_t end_time = get_absolute_time();
     int64_t frame_time_us = absolute_time_diff_us(start_time, end_time);
@@ -224,9 +228,15 @@ int main() {
     graphics.text(buf, Point(240, 6), Tufty2040::WIDTH);
 
     st7789.update(&graphics);
-    //orient = /*mat_roll(x * 0.25f) * */ mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+#ifdef RDUCK
+    orient = /*mat_roll(x * 0.25f) * */ mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+#else
     orient = mat_yaw(x);
-    x += 0.02f;
+#endif
+    x += inc;
+
+    if (button_down.raw()) inc = 0.f;
+    if (button_up.raw()) inc = 0.01f;
   }
 
   return 0;

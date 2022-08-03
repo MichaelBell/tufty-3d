@@ -167,12 +167,7 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
         x = 0;
     }
 
-    while (run[i].run_length == 0 && i < RUNS_PER_LINE - 1)
-    {
-        ++i;
-    }
-
-    if (run[i].colour != colour || run[i].depth != depth)
+    if (run[i].run_length > 0 && (run[i].colour != colour || run[i].depth != depth))
     {
         // Aim now is to be pointing to the beginning of an existing run that we can overwrite
         assert(run[i].run_length > x);
@@ -231,6 +226,8 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
             if (!make_space_at(run, i)) return;
         }
 
+        assert(run[i].depth >= depth || run[i].run_length == 0);
+
         int old_run_length = run[i].run_length;
         assert(old_run_length <= l);
         run[i].colour = colour;
@@ -242,6 +239,8 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
     {
         l -= run[i].run_length - x;
         if (l > 0) {
+            run[i].colour = colour;
+            run[i].depth = depth;
             run[i].run_length += l;
         }
     }    
@@ -251,7 +250,7 @@ void RenderBuffer::set_pixel_span(const Point& p, uint _l)
         int modified_i = i;
         for (++i; i < RUNS_PER_LINE; ++i)
         {
-            if (run[i].depth < depth)
+            if (run[i].depth < depth && run[i].run_length > 0)
             {
                 run[modified_i].run_length -= l;
                 l -= run[i].run_length;

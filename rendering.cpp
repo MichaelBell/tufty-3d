@@ -32,7 +32,7 @@ bool is_back_face(const Vec2D (&w)[3]) {
 
 void set_depth_for_triangle(const Vec3D (&v)[3]) {
   fixed_t z = v[0].z + v[1].z + v[2].z;
-  int d = z.val >> (FIXED_PT_PREC - 8);
+  int d = z.val >> (FIXED_PT_PREC - 5);
   if (d > 254 * 254) d = 254;
   else if (d > 3) d = isqrt(d);
   else d = 1;
@@ -91,18 +91,17 @@ void fill_triangle(const Vec3D (&v)[3]) {
     }
   }
 
-  int end_y = min(max(wo[1].y, wo[2].y), Tufty2040::HEIGHT - 1);
+  if (wo[0].y >= Tufty2040::HEIGHT) return;
+  const int end_y = min(max(wo[1].y, wo[2].y), Tufty2040::HEIGHT - 1);
   if (end_y < 0) return;
 
+  const int min_x = max(0, int(min(wo[0].x, wo[1].x)));
+  const int max_x = min(Tufty2040::WIDTH - 1, int(max(wo[0].x, wo[2].x)));
+
   if (wo[0].y == end_y) {
-    int start_x(min(wo[0].x, wo[1].x));
-    int end_x(max(wo[0].x, wo[2].x));
-    graphics.pixel_span(Point(start_x, wo[0].y), end_x - start_x + 1);
+    graphics.pixel_span(Point(min_x, wo[0].y), max_x - min_x + 1);
     return;
   }
-
-  int min_x = min(0, int(min(wo[0].x, wo[1].x)));
-  int max_x = max(Tufty2040::WIDTH - 1, int(max(wo[0].x, wo[2].x)));
 
   fixed_t start_x = wo[0].x;
   fixed_t end_x = wo[0].x;
