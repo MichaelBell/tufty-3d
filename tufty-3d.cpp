@@ -6,6 +6,7 @@
 #include <algorithm>
 #include "pico/time.h"
 #include "pico/platform.h"
+#include "hardware/clocks.h"
 
 #include "common/pimoroni_common.hpp"
 #include "drivers/st7789/st7789.hpp"
@@ -21,29 +22,7 @@
 
 using namespace pimoroni;
 
-Tufty2040 tufty;
-
-ST7789 st7789(
-  Tufty2040::WIDTH,
-  Tufty2040::HEIGHT,
-  ROTATE_180,
-  ParallelPins{
-    Tufty2040::LCD_CS,
-    Tufty2040::LCD_DC,
-    Tufty2040::LCD_WR,
-    Tufty2040::LCD_RD,
-    Tufty2040::LCD_D0, 
-    Tufty2040::BACKLIGHT
-  }
-);
-
-RenderBuffer graphics(st7789.width, st7789.height, nullptr);
-
-Button button_a(Tufty2040::A);
-Button button_b(Tufty2040::B);
-Button button_c(Tufty2040::C);
-Button button_up(Tufty2040::UP);
-Button button_down(Tufty2040::DOWN);
+RenderBuffer graphics(Tufty2040::WIDTH, Tufty2040::HEIGHT, nullptr);
 
 void draw_triangle(const Vec3D (&v)[3]) {
   Point w[3];
@@ -99,7 +78,37 @@ void draw_cube(float theta, float phi) {
 }
 
 int main() {
+  constexpr uint32_t CLOCK_KHZ = 192000;
+  set_sys_clock_khz(CLOCK_KHZ, true);
+  clock_configure(clk_peri,
+                  0,
+                  CLOCKS_CLK_PERI_CTRL_AUXSRC_VALUE_CLK_SYS,
+                  CLOCK_KHZ * KHZ,
+                  CLOCK_KHZ * KHZ);
+
   stdio_init_all();
+
+  Tufty2040 tufty;
+
+  ST7789 st7789(
+    Tufty2040::WIDTH,
+    Tufty2040::HEIGHT,
+    ROTATE_180,
+    ParallelPins{
+      Tufty2040::LCD_CS,
+      Tufty2040::LCD_DC,
+      Tufty2040::LCD_WR,
+      Tufty2040::LCD_RD,
+      Tufty2040::LCD_D0, 
+      Tufty2040::BACKLIGHT
+    }
+  );
+
+  Button button_a(Tufty2040::A);
+  Button button_b(Tufty2040::B);
+  Button button_c(Tufty2040::C);
+  Button button_up(Tufty2040::UP);
+  Button button_down(Tufty2040::DOWN);
 
   //sleep_ms(5000);
 

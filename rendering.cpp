@@ -174,7 +174,7 @@ void render_model(const Model& model)
     for (uint16_t i = 0; i < model.num_triangles; ++i)
     {
         Vec3D v[3];
-        Triangle& tri = model.triangles[i];
+        const Triangle& tri = model.triangles[i];
         set_colour_for_normal(tri.normal, model.materials[tri.mat_idx]);
 
         v[0] = model.vertices[tri.vert_idx_0];
@@ -188,7 +188,7 @@ void render_model(const Model& model, const Vec3D& position, const Matrix<3, 3>&
 {
     for (uint16_t i = 0; i < model.num_triangles; ++i)
     {
-        Triangle& tri = model.triangles[i];
+        const Triangle& tri = model.triangles[i];
         Vec3D normal = orientation * tri.normal;
         set_colour_for_normal(normal, model.materials[tri.mat_idx]);
 

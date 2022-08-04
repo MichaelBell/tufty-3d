@@ -20,12 +20,10 @@ struct Material
 
 struct Model
 {
-    Vec3D* vertices;
-    Triangle* triangles;
+    const Vec3D* vertices;
+    const Triangle* triangles;
     Material* materials;
     uint16_t num_vertices;
     uint16_t num_triangles;
     uint8_t num_materials;
 };
-
-void set_triangle_normals(Model& model);

@@ -20,7 +20,6 @@ pico_sdk_init()
 add_executable(${NAME}
     tufty-3d.cpp 
     lighting.cpp
-    model.cpp
     rendering.cpp
     renderbuffer.cpp
     rduck.cpp
