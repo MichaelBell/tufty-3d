@@ -104,11 +104,11 @@ int main() {
     }
   );
 
-  Button button_a(Tufty2040::A);
-  Button button_b(Tufty2040::B);
-  Button button_c(Tufty2040::C);
-  Button button_up(Tufty2040::UP);
-  Button button_down(Tufty2040::DOWN);
+  Button button_a(Tufty2040::A, Polarity::ACTIVE_HIGH);
+  Button button_b(Tufty2040::B, Polarity::ACTIVE_HIGH);
+  Button button_c(Tufty2040::C, Polarity::ACTIVE_HIGH);
+  Button button_up(Tufty2040::UP, Polarity::ACTIVE_HIGH);
+  Button button_down(Tufty2040::DOWN, Polarity::ACTIVE_HIGH);
 
   //sleep_ms(5000);
 
@@ -118,7 +118,9 @@ int main() {
   Pen RED = graphics.create_pen(255, 0, 0);
   Pen GREEN = graphics.create_pen(0, 255, 0);
   Pen BLUE = graphics.create_pen(0, 0, 255);
-  Pen BG = graphics.create_pen(40, 60, 120);
+  Pen DUCK_BG = graphics.create_pen(40, 60, 120);
+  Pen TEA_BG = graphics.create_pen(120, 20, 40);
+  bool show_duck = false;
 
   Material mat_white = make_material_for_colour(RGB(255, 255, 255));
   Material mat_red = make_material_for_colour(RGB(255, 0, 0));
@@ -127,7 +129,7 @@ int main() {
 
   uint8_t i = 0;
 
-  graphics.set_pen(BG);
+  graphics.set_pen(TEA_BG);
   graphics.set_depth(255);
   printf("Clearing\n");
   graphics.clear();
@@ -202,28 +204,26 @@ int main() {
   }
 #endif
 
-#ifdef RDUCK
-  Model& teapot_model = get_rduck_model();
-  Matrix<3, 3> orient = mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
-#else
+  Model& duck_model = get_rduck_model();
   Model& teapot_model = get_teapot_model();
   Matrix<3, 3> orient = MAT_IDENTITY;
-#endif
+
   float x = 0;
   float inc = 0.01f;
 
   absolute_time_t start_time = get_absolute_time();
   while (true)
   {
-    graphics.set_pen(BG);
+    graphics.set_pen(show_duck ? DUCK_BG : TEA_BG);
     graphics.set_depth(255);
     graphics.clear();
 
-#ifdef RDUCK
-    render_model(teapot_model, Vec3D { 0, -3, 10 }, orient);
-#else
-    render_model(teapot_model, Vec3D { 0, -2, 6 }, orient);
-#endif
+    if (show_duck) {
+      render_model(duck_model, Vec3D { 0, -3, 10 }, orient);
+    }
+    else {
+      render_model(teapot_model, Vec3D { 0, -2, 6 }, orient);
+    }
 
     absolute_time_t end_time = get_absolute_time();
     int64_t frame_time_us = absolute_time_diff_us(start_time, end_time);
@@ -237,15 +237,18 @@ int main() {
     graphics.text(buf, Point(230, 6), Tufty2040::WIDTH);
 
     st7789.update(&graphics);
-#ifdef RDUCK
-    orient = /*mat_roll(x * 0.25f) * */ mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
-#else
-    orient = mat_yaw(x);
-#endif
-    x += inc;
-
     if (button_down.raw()) inc = 0.f;
     if (button_up.raw()) inc = 0.01f;
+    if (button_a.raw()) show_duck = false;
+    if (button_c.raw()) show_duck = true;
+
+    if (show_duck) {
+      orient = mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+    }
+    else {
+      orient = mat_yaw(x);
+    }
+    x += inc;
   }
 
   return 0;
