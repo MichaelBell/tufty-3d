@@ -3,8 +3,10 @@
 This project renders 3D models on the Tufty2040.  Still very much a work in progress!
 
 To make a model suitable for the renderer, run the convert.py script on a model in obj format, e.g.:
-  python convert.py teapot
-to conver teapot.obj to teapot.cpp
+
+    python convert.py teapot
+
+to convert teapot.obj to teapot.cpp
 
 The model must have less than 512 vertices, and all faces must be triangles.
 
