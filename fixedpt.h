@@ -64,6 +64,14 @@ inline fixed_pt<PT>& operator-=(fixed_pt<PT>& a, const fixed_pt<PT>& b)
 }
 
 template <int PT>
+inline fixed_pt<PT> operator-(const fixed_pt<PT>& a)
+{
+    fixed_pt<PT> v;
+    v.val = - a.val;
+    return v;
+}
+
+template <int PT>
 inline fixed_pt<PT> operator*(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
 {
     fixed_pt<PT> v;

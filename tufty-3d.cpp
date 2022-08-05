@@ -208,8 +208,8 @@ int main() {
   Model& teapot_model = get_squirrel_model();
   Matrix<3, 3> orient = MAT_IDENTITY;
 
-  float x = 0;
-  float inc = 0.01f;
+  float x = 1.2f;
+  float inc = 0.00f;
 
   absolute_time_t start_time = get_absolute_time();
   while (true)

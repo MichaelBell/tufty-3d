@@ -9,6 +9,27 @@ const Vec2D half_screen_size = screen_size >> 1;
 
 const int screen_scale = Tufty2040::WIDTH << 5;
 
+extern "C" void get_scales(int z1, int z2, int z3, int* scale);
+
+void project_vertices(const Vec3D (&v)[3], Vec2D (&w)[3])
+{
+#if 1
+  get_scales(v[0].z.val, v[1].z.val, v[2].z.val, (int*)&w[0]);
+  for (int i = 0; i < 3; ++i) {
+    w[i] = (Vec2D{v[i].x, v[i].y} * w[i]) + half_screen_size; 
+  }
+#else
+  for (int i = 0; i < 3; ++i) {
+    const int inv_z = 0x40000000 / v[i].z.val;
+    const int scale = screen_scale * inv_z;
+    Vec2D rv;
+    rv.x.val = scale;
+    rv.y.val = -scale;
+    w[i] = (Vec2D{v[i].x, v[i].y} * rv) + half_screen_size; 
+  }
+#endif
+}
+
 // Project from camera relative space (Z forward from camera, X right, Y up)
 // into screen space
 Vec2D project_vertex(const Vec3D& v) {
@@ -42,9 +63,17 @@ void set_depth_for_triangle(const Vec3D (&v)[3]) {
 
 void fill_triangle(const Vec3D (&v)[3]) {
   Vec2D w[3];
+#if 0
   for (int i = 0; i < 3; ++i) {
     w[i] = project_vertex(v[i]);
   }
+#else
+  fixed_t scales[3];
+  get_scales(v[0].z.val, v[1].z.val, v[2].z.val, (int*)scales);
+  for (int i = 0; i < 3; ++i) {
+    w[i] = (Vec2D{v[i].x * scales[i], v[i].y * -scales[i]}) + half_screen_size; 
+  }
+#endif
 
   if (is_back_face(w)) return;
 

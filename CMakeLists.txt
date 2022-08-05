@@ -22,6 +22,8 @@ add_executable(${NAME}
     lighting.cpp
     rendering.cpp
     renderbuffer.cpp
+    renderasm.S
+
     rduck.cpp
     teapot.cpp
     squirrel.cpp
