@@ -22,7 +22,7 @@ struct Model
 {
     const Vec3D* vertices;
     const Triangle* triangles;
-    Material* materials;
+    const Material* materials;
     uint16_t num_vertices;
     uint16_t num_triangles;
     uint8_t num_materials;

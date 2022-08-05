@@ -24,6 +24,7 @@ add_executable(${NAME}
     renderbuffer.cpp
     rduck.cpp
     teapot.cpp
+    squirrel.cpp
 )
 
 pico_set_program_name(${NAME} "tufty-3d")

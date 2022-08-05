@@ -205,7 +205,7 @@ int main() {
 #endif
 
   Model& duck_model = get_rduck_model();
-  Model& teapot_model = get_teapot_model();
+  Model& teapot_model = get_squirrel_model();
   Matrix<3, 3> orient = MAT_IDENTITY;
 
   float x = 0;
@@ -218,12 +218,14 @@ int main() {
     graphics.set_depth(255);
     graphics.clear();
 
+    absolute_time_t render_start_time = get_absolute_time();
     if (show_duck) {
       render_model(duck_model, Vec3D { 0, -3, 10 }, orient);
     }
     else {
-      render_model(teapot_model, Vec3D { 0, -2, 6 }, orient);
+      render_model(teapot_model, Vec3D { 0, -18, 38 }, orient);
     }
+    printf("Render time: %lldus\n", absolute_time_diff_us(render_start_time, get_absolute_time()));
 
     absolute_time_t end_time = get_absolute_time();
     int64_t frame_time_us = absolute_time_diff_us(start_time, end_time);
@@ -242,7 +244,7 @@ int main() {
     if (button_a.raw()) show_duck = false;
     if (button_c.raw()) show_duck = true;
 
-    if (show_duck) {
+    if (true || show_duck) {
       orient = mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
     }
     else {
