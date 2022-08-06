@@ -9,29 +9,8 @@ const Vec2D half_screen_size = screen_size >> 1;
 
 const int screen_scale = Tufty2040::WIDTH << 5;
 
+// Project vertices to screen space and return false if is a back face
 extern "C" bool project_vertices(int* v, int* w);
-extern "C" void get_3_scales(int v0, int v1, int v2, int* scale);
-
-#if 0
-void project_vertices(const Vec3D (&v)[3], Vec2D (&w)[3])
-{
-#if 1
-  get_scales(v[0].z.val, v[1].z.val, v[2].z.val, (int*)&w[0]);
-  for (int i = 0; i < 3; ++i) {
-    w[i] = (Vec2D{v[i].x, v[i].y} * w[i]) + half_screen_size; 
-  }
-#else
-  for (int i = 0; i < 3; ++i) {
-    const int inv_z = 0x40000000 / v[i].z.val;
-    const int scale = screen_scale * inv_z;
-    Vec2D rv;
-    rv.x.val = scale;
-    rv.y.val = -scale;
-    w[i] = (Vec2D{v[i].x, v[i].y} * rv) + half_screen_size; 
-  }
-#endif
-}
-#endif
 
 // Project from camera relative space (Z forward from camera, X right, Y up)
 // into screen space
@@ -64,30 +43,7 @@ void __not_in_flash_func(set_depth_for_triangle)(const Vec3D (&v)[3]) {
   graphics.set_depth(d);
 }
 
-#if 0
-void __not_in_flash("rendering") fill_triangle(const Vec3D (&v)[3]) {
-  Vec2D w[3];
-#if 0
-  for (int i = 0; i < 3; ++i) {
-    w[i] = project_vertex(v[i]);
-  }
-
-  if (is_back_face(w)) return;
-#else
-  if (project_vertices((int*)v, (int*)w)) return;
-#if 0
-  //get_3_scales(v[0].z.val, v[1].z.val, v[2].z.val, (int*)scales);
-  for (int i = 0; i < 3; ++i) {
-    w[i] = (Vec2D{v[i].x * scales[i], v[i].y * -scales[i]}) + half_screen_size; 
-  }
-#endif
-#endif
-
-  set_depth_for_triangle(v);
-#else
-
 void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
-#endif
   // Order points so first has least y coord, and second has lower x coord than third
   struct RasterPoint
   {
@@ -207,7 +163,6 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
   }
 }
 
-#if 0
 void render_model(const Model& model)
 {
     for (uint16_t i = 0; i < model.num_triangles; ++i)
@@ -219,10 +174,14 @@ void render_model(const Model& model)
         v[0] = model.vertices[tri.vert_idx_0];
         v[1] = model.vertices[tri.vert_idx_1];
         v[2] = model.vertices[tri.vert_idx_2];
-        fill_triangle(v);
+
+        Vec2D w[3];
+        if (!project_vertices(&v[0].x.val, &w[0].x.val)) continue;
+        set_depth_for_triangle(v);
+
+        fill_triangle(w);
     }
 }
-#endif
 
 void __not_in_flash("rendering") render_model(const Model& model, const Vec3D& position, const Matrix<3, 3>& orientation)
 {
@@ -237,23 +196,10 @@ void __not_in_flash("rendering") render_model(const Model& model, const Vec3D& p
         v[1] = orientation * model.vertices[tri.vert_idx_1] + position;
         v[2] = orientation * model.vertices[tri.vert_idx_2] + position;
 
-#if 0
-        fill_triangle(v);
-#else
         Vec2D w[3];
-#if 0
-  for (int i = 0; i < 3; ++i) {
-    w[i] = project_vertex(v[i]);
-  }
-
-  if (is_back_face(w)) continue;
-#else
         if (!project_vertices(&v[0].x.val, &w[0].x.val)) continue;
-        //if (is_back_face(w))  continue;
-#endif
         set_depth_for_triangle(v);
 
         fill_triangle(w);
-#endif
     }
 }

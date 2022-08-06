@@ -62,12 +62,12 @@ void RenderBuffer::set_pixel(const Point &p)
 
 namespace
 {
-    bool __not_in_flash_func(run_is_same)(const PixelRun& a, const PixelRun& b)
+    inline bool run_is_same(const PixelRun& a, const PixelRun& b)
     {
         return a.colour == b.colour && a.depth == b.depth;
     }
 
-    bool __not_in_flash_func(make_space_at)(PixelRun* run, int& i)
+    bool __not_in_flash("render_buffer") make_space_at(PixelRun* run, int& i)
     {
         if (i > 0 && run[i-1].run_length == 0)
         {
