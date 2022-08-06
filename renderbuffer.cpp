@@ -62,7 +62,7 @@ void RenderBuffer::set_pixel(const Point &p)
 
 namespace
 {
-    inline bool run_is_same(const PixelRun& a, const PixelRun& b)
+    __always_inline bool run_is_same(const PixelRun& a, const PixelRun& b)
     {
         return a.colour == b.colour && a.depth == b.depth;
     }

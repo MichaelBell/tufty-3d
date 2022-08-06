@@ -12,6 +12,7 @@ const int screen_scale = Tufty2040::WIDTH << 5;
 // Project vertices to screen space and return false if is a back face
 extern "C" bool project_vertices(int* v, int* w);
 
+#if 0
 // Project from camera relative space (Z forward from camera, X right, Y up)
 // into screen space
 Vec2D __not_in_flash_func(project_vertex)(const Vec3D& v) {
@@ -32,8 +33,9 @@ bool __not_in_flash_func(is_back_face)(const Vec2D (&w)[3]) {
   Vec2D b = w[1] - w[0];
   return (a.x * b.y >= a.y * b.x);
 }
+#endif
 
-void __not_in_flash_func(set_depth_for_triangle)(const Vec3D (&v)[3]) {
+void __not_in_flash("rendering") set_depth_for_triangle(const Vec3D (&v)[3]) {
   fixed_t z = v[0].z + v[1].z + v[2].z;
   int d = z.val >> (FIXED_PT_PREC - 5);
   if (d > 254 * 254) d = 254;
@@ -41,6 +43,26 @@ void __not_in_flash_func(set_depth_for_triangle)(const Vec3D (&v)[3]) {
   else d = 1;
 
   graphics.set_depth(d);
+}
+
+namespace {
+  // Returns a / b
+  __always_inline int signed_divide(int a, int b) {
+    int rv;
+    const int sio = SIO_BASE;
+    asm (
+      "str %[a], [%[sio], #0x068]\n\t"
+      "str %[b], [%[sio], #0x06c]\n\t"
+      "b 1f\n"
+      "1: b 1f\n"
+      "1: b 1f\n"
+      "1: b 1f\n"
+      "1: ldr %[rv], [%[sio], #0x070]\n"
+      : [rv] "=l" (rv)
+      : [a] "l" (a), [b] "l" (b), [sio] "l" (sio) 
+    );
+    return rv;
+  }
 }
 
 void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
@@ -93,7 +115,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
   const int max_x = min(Tufty2040::WIDTH - 1, int(max(wo[0].x, wo[2].x)));
 
   if (wo[0].y == end_y) {
-    graphics.pixel_span(Point(min_x, wo[0].y), max_x - min_x + 1);
+    graphics.set_pixel_span(Point(min_x, wo[0].y), max_x - min_x + 1);
     return;
   }
 
@@ -102,20 +124,21 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
   fixed_t grad_start_x;
   fixed_t grad_end_x;
   if (wo[1].y > wo[0].y) {
-    grad_start_x.val = hw_divider_quotient_s32(wo[1].x.val - wo[0].x.val, wo[1].y - wo[0].y);
+    grad_start_x.val = signed_divide(wo[1].x.val - wo[0].x.val, wo[1].y - wo[0].y);
   } else {
     grad_start_x = wo[1].x - wo[0].x;
   }
 
   if (wo[2].y > wo[0].y) {
-    grad_end_x.val = hw_divider_quotient_s32(wo[2].x.val - wo[0].x.val, wo[2].y - wo[0].y);
+    grad_end_x.val = signed_divide(wo[2].x.val - wo[0].x.val, wo[2].y - wo[0].y);
   } else {
     grad_end_x = wo[2].x - wo[0].x;
   }
   if (grad_start_x > grad_end_x)
   {
     std::swap(grad_start_x, grad_end_x);
-    std::swap(wo[1], wo[2]);
+    std::swap(wo[1].x.val, wo[2].x.val);
+    std::swap(wo[1].y, wo[2].y);
   }
 
   bool new_start = true;
@@ -124,7 +147,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
     if (y != end_y && wo[1].y == y) {
       start_x = wo[1].x;
       if (wo[2].y > y) {
-        grad_start_x.val = hw_divider_quotient_s32(wo[2].x.val - start_x.val, wo[2].y - y);
+        grad_start_x.val = signed_divide(wo[2].x.val - start_x.val, wo[2].y - y);
         new_start = true;
       }
     }
@@ -139,7 +162,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
     if (y != end_y && wo[2].y == y) {
       end_x = wo[2].x;
       if (wo[1].y > y) {
-        grad_end_x.val = hw_divider_quotient_s32(wo[1].x.val - end_x.val, wo[1].y - y);
+        grad_end_x.val = signed_divide(wo[1].x.val - end_x.val, wo[1].y - y);
         new_end = true;
       }
     }
@@ -157,7 +180,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
       const int clamped_end_x = min(int(end_x), max_x);
       const int clamped_len(clamped_end_x - clamped_start_x + 1);
       if (clamped_len > 0) {
-        graphics.pixel_span(Point(int(clamped_start_x), y), clamped_len);
+        graphics.set_pixel_span(Point(int(clamped_start_x), y), clamped_len);
       }
     }
   }
