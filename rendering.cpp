@@ -45,26 +45,6 @@ void __not_in_flash("rendering") set_depth_for_triangle(const Vec3D (&v)[3]) {
   graphics.set_depth(d);
 }
 
-namespace {
-  // Returns a / b
-  __always_inline int signed_divide(int a, int b) {
-    int rv;
-    const int sio = SIO_BASE;
-    asm (
-      "str %[a], [%[sio], #0x068]\n\t"
-      "str %[b], [%[sio], #0x06c]\n\t"
-      "b 1f\n"
-      "1: b 1f\n"
-      "1: b 1f\n"
-      "1: b 1f\n"
-      "1: ldr %[rv], [%[sio], #0x070]\n"
-      : [rv] "=l" (rv)
-      : [a] "l" (a), [b] "l" (b), [sio] "l" (sio) 
-    );
-    return rv;
-  }
-}
-
 void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
   // Order points so first has least y coord, and second has lower x coord than third
   struct RasterPoint
@@ -114,7 +94,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
   const int min_x = max(0, int(min(wo[0].x, wo[1].x)));
   const int max_x = min(Tufty2040::WIDTH - 1, int(max(wo[0].x, wo[2].x)));
 
-  if (wo[0].y == end_y) {
+  if (wo[0].y == end_y) [[unlikely]] {
     graphics.set_pixel_span(Point(min_x, wo[0].y), max_x - min_x + 1);
     return;
   }
@@ -123,14 +103,14 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
   fixed_t end_x = wo[0].x;
   fixed_t grad_start_x;
   fixed_t grad_end_x;
-  if (wo[1].y > wo[0].y) {
-    grad_start_x.val = signed_divide(wo[1].x.val - wo[0].x.val, wo[1].y - wo[0].y);
+  if (wo[1].y > wo[0].y) [[likely]] {
+    grad_start_x.val = hw_divider_s32_quotient_inlined(wo[1].x.val - wo[0].x.val, wo[1].y - wo[0].y);
   } else {
     grad_start_x = wo[1].x - wo[0].x;
   }
 
-  if (wo[2].y > wo[0].y) {
-    grad_end_x.val = signed_divide(wo[2].x.val - wo[0].x.val, wo[2].y - wo[0].y);
+  if (wo[2].y > wo[0].y) [[likely]] {
+    grad_end_x.val = hw_divider_s32_quotient_inlined(wo[2].x.val - wo[0].x.val, wo[2].y - wo[0].y);
   } else {
     grad_end_x = wo[2].x - wo[0].x;
   }
@@ -147,7 +127,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
     if (y != end_y && wo[1].y == y) {
       start_x = wo[1].x;
       if (wo[2].y > y) {
-        grad_start_x.val = signed_divide(wo[2].x.val - start_x.val, wo[2].y - y);
+        grad_start_x.val = hw_divider_s32_quotient_inlined(wo[2].x.val - start_x.val, wo[2].y - y);
         new_start = true;
       }
     }
@@ -162,7 +142,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
     if (y != end_y && wo[2].y == y) {
       end_x = wo[2].x;
       if (wo[1].y > y) {
-        grad_end_x.val = signed_divide(wo[1].x.val - end_x.val, wo[1].y - y);
+        grad_end_x.val = hw_divider_s32_quotient_inlined(wo[1].x.val - end_x.val, wo[1].y - y);
         new_end = true;
       }
     }
@@ -175,7 +155,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
       }
     }
 
-    if (y >= 0) {
+    if (y >= 0) [[likely]] {
       const int clamped_start_x = max(int(start_x), min_x);
       const int clamped_end_x = min(int(end_x), max_x);
       const int clamped_len(clamped_end_x - clamped_start_x + 1);
