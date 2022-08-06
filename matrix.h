@@ -113,16 +113,15 @@ inline Vec3D operator*(const Matrix<3, 3>& a, const Vec3D& b) {
     return v;
 }
 
-// Multiply two fixed point numbers that have absolute value <= 1
-inline fixed_t unit_multiply(const fixed_t& a, const fixed_t& b) {
-    static_assert(FIXED_PT_PREC > 15, "Fixed point precision not supported");
-
-    fixed_t rv;
-    rv.val = (a.val >> (FIXED_PT_PREC - 15)) * (b.val >> (FIXED_PT_PREC - 15)) >> (FIXED_PT_PREC - (2 * (FIXED_PT_PREC - 15)));
-    return rv;
+inline Vec3D orient_normal(const Matrix<3, 3>& a, const Vec3D& b) {
+    Vec3D v;
+    v.x = unit_unit_multiply(a(0, 0), b.x) + unit_unit_multiply(a(1, 0), b.y) + unit_unit_multiply(a(2, 0), b.z);
+    v.y = unit_unit_multiply(a(0, 1), b.x) + unit_unit_multiply(a(1, 1), b.y) + unit_unit_multiply(a(2, 1), b.z);
+    v.z = unit_unit_multiply(a(0, 2), b.x) + unit_unit_multiply(a(1, 2), b.y) + unit_unit_multiply(a(2, 2), b.z);
+    return v;
 }
 
-inline Vec3D orient_normal(const Matrix<3, 3>& a, const Vec3D& b) {
+inline Vec3D orient_vector(const Matrix<3, 3>& a, const Vec3D& b) {
     Vec3D v;
     v.x = unit_multiply(a(0, 0), b.x) + unit_multiply(a(1, 0), b.y) + unit_multiply(a(2, 0), b.z);
     v.y = unit_multiply(a(0, 1), b.x) + unit_multiply(a(1, 1), b.y) + unit_multiply(a(2, 1), b.z);

@@ -195,9 +195,9 @@ void __not_in_flash("rendering") render_model(const Model& model, const Vec3D& p
         set_colour_for_normal(normal, model.materials[tri.mat_idx]);
 
         Vec3D v[3];
-        v[0] = orientation * model.vertices[tri.vert_idx_0] + position;
-        v[1] = orientation * model.vertices[tri.vert_idx_1] + position;
-        v[2] = orientation * model.vertices[tri.vert_idx_2] + position;
+        v[0] = orient_vector(orientation, model.vertices[tri.vert_idx_0]) + position;
+        v[1] = orient_vector(orientation, model.vertices[tri.vert_idx_1]) + position;
+        v[2] = orient_vector(orientation, model.vertices[tri.vert_idx_2]) + position;
 
         Vec2D w[3];
         if (!project_vertices(&v[0].x.val, &w[0].x.val)) continue;

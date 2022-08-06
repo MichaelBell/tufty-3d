@@ -7,7 +7,7 @@ Vec3D light_direction = Normalize(Vec3D{ 1, 1, -1 });
 
 RGB565 __not_in_flash("rendering") get_lit_colour(const Vec3D& normal, const Vec3D& ambient_colour, const Vec3D& diffuse_colour)
 {
-  const fixed_t l = Dot(light_direction, normal);
+  const fixed_t l = DotNormals(light_direction, normal);
 
   Vec3D colour;
   if (l < fixed_t(0)) colour = ambient_colour;

@@ -92,6 +92,29 @@ inline fixed_pt<PT>& operator*=(fixed_pt<PT>& a, const fixed_pt<PT>& b)
     return a;
 }
 
+// Multiply two fixed point numbers that have absolute value <= 1
+template <int PT>
+inline fixed_pt<PT> unit_unit_multiply(const fixed_pt<PT>& a, const fixed_pt<PT>& b) {
+    static_assert(PT > 15, "Fixed point precision not supported");
+
+    fixed_pt<PT> v;
+    v.val = (a.val >> (PT - 15)) * (b.val >> (PT - 15)) >> (PT - (2 * (PT - 15)));
+    return v;
+}
+
+// Multiply two fixed point numbers, where `a` has an absolute value <= 1
+template <int PT>
+inline fixed_pt<PT> unit_multiply(const fixed_pt<PT>& a, const fixed_pt<PT>& b) {
+    static_assert(PT > 15, "Fixed point precision not supported");
+
+    fixed_pt<PT> v;
+    int32_t al = a.val >> (PT - 15);
+    int32_t bh = b.val >> 15;
+    int32_t bl = b.val & 0x7fff;
+    v.val = ((al * bl) >> 15) + (al * bh);
+    return v;
+}
+
 template <int PT>
 inline fixed_pt<PT> operator/(const fixed_pt<PT>& a, const fixed_pt<PT>& b)
 {

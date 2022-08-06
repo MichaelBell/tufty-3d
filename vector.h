@@ -147,6 +147,11 @@ inline fixed_t Dot(const Vec3D& a, const Vec3D& b) {
   return a.x * b.x + a.y * b.y + a.z * b.z;
 }
 
+// Dot two unit vectors, so we can use fast multiplies 
+inline fixed_t DotNormals(const Vec3D& a, const Vec3D& b) {
+  return unit_unit_multiply(a.x, b.x) + unit_unit_multiply(a.y, b.y) + unit_unit_multiply(a.z, b.z);
+}
+
 inline Vec3D Cross(const Vec3D& a, const Vec3D& b) {
   Vec3D v;
   v.x = a.y * b.z - a.z * b.y;
