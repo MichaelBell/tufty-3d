@@ -186,7 +186,7 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
   }
 }
 
-void render_model(const Model& model)
+void __not_in_flash("rendering") render_model(const Model& model)
 {
     for (uint16_t i = 0; i < model.num_triangles; ++i)
     {
@@ -211,7 +211,7 @@ void __not_in_flash("rendering") render_model(const Model& model, const Vec3D& p
     for (uint16_t i = 0; i < model.num_triangles; ++i)
     {
         const Triangle& tri = model.triangles[i];
-        Vec3D normal = orientation * tri.normal;
+        Vec3D normal = orient_normal(orientation, tri.normal);
         set_colour_for_normal(normal, model.materials[tri.mat_idx]);
 
         Vec3D v[3];
