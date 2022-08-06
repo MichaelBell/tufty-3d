@@ -13,9 +13,8 @@
 .thumb_func
 project_vertices:
   push {r4, r5, r6, r7, lr}
-  mov r7, r9
-  push {r7}
-  ldr r2, =(SIO_BASE)
+  movs r2, #13
+  lsls r2, #28  // SIO_BASE
   movs r3, #128
   lsls r3, #23  // 0x40000000
   str r3, [r2, #SIO_DIV_SDIVIDEND_OFFSET]
@@ -41,7 +40,7 @@ project_vertices:
   lsls r3, r3, #17
   lsrs r3, r3, #17 // al
   asrs r7, r1, #15 // bh
-  mov r9, r1
+  movs r2, r1
   lsls r1, r1, #17
   lsrs r1, r1, #17 // bl
   movs r5, r1
@@ -57,13 +56,12 @@ project_vertices:
   adds r3, r3, r6
   
   // Multiply a = v[0].y * -scale
-  mov r1, r9
-  negs r1, r1
+  negs r2, r2
   asrs r6, r4, #15 // ah
   lsls r4, r4, #17
   lsrs r4, r4, #17 // al
-  asrs r7, r1, #15 // bh
-  lsls r1, r1, #17
+  asrs r7, r2, #15 // bh
+  lsls r1, r2, #17
   lsrs r1, r1, #17 // bl
   movs r5, r1
   muls r5, r4  // al * bl
@@ -78,11 +76,12 @@ project_vertices:
   adds r4, r4, r6
 
   // r0 = &v[0].z
-  // r2 = SIO_BASE
   // r3 = v[0].x * scale
   // r4 = v[0].y * -scale
 
   mov r1, ip
+  movs r2, #13
+  lsls r2, #28  // SIO_BASE
   movs r5, #15
   lsls r5, #21  // half screen height (fixed point)
   adds r4, r4, r5
@@ -280,6 +279,4 @@ project_vertices:
   adcs r0, r1
   uxtb r0, r0
   
-  pop {r7}
-  mov r9, r7
   pop {r4, r5, r6, r7, pc}
