@@ -10,7 +10,7 @@ struct fixed_pt
 {
     int val;
 
-    fixed_pt() = default;
+    fixed_pt() {}
     constexpr fixed_pt(const int n)
         : val(n << PT)
     {}

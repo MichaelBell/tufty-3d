@@ -62,12 +62,12 @@ void RenderBuffer::set_pixel(const Point &p)
 
 namespace
 {
-    bool run_is_same(const PixelRun& a, const PixelRun& b)
+    bool __not_in_flash_func(run_is_same)(const PixelRun& a, const PixelRun& b)
     {
         return a.colour == b.colour && a.depth == b.depth;
     }
 
-    bool make_space_at(PixelRun* run, int& i)
+    bool __not_in_flash_func(make_space_at)(PixelRun* run, int& i)
     {
         if (i > 0 && run[i-1].run_length == 0)
         {
@@ -143,7 +143,7 @@ namespace
     }
 }
 
-void RenderBuffer::set_pixel_span(const Point& p, uint _l)
+void __not_in_flash("render_buffer") RenderBuffer::set_pixel_span(const Point& p, uint _l)
 {
     int l = _l;
     if (l >= 4 * width_per_run)
@@ -319,7 +319,7 @@ void RenderBuffer::scanline_convert(PenType type, conversion_callback_func callb
     }
 }
 
-PixelRun* RenderBuffer::get_run(int y, int x)
+PixelRun* __not_in_flash("render_buffer") RenderBuffer::get_run(int y, int x)
 {
     PixelRun* run = static_cast<PixelRun*>(frame_buffer);
     return &run[y * RUNS_PER_LINE + x];
