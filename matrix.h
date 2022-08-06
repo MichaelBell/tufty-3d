@@ -113,9 +113,12 @@ inline Vec3D operator*(const Matrix<3, 3>& a, const Vec3D& b) {
     return v;
 }
 
+// Multiply two fixed point numbers that have absolute value <= 1
 inline fixed_t unit_multiply(const fixed_t& a, const fixed_t& b) {
+    static_assert(FIXED_PT_PREC > 15, "Fixed point precision not supported");
+
     fixed_t rv;
-    rv.val = (a.val >> (FIXED_PT_PREC - 14)) * (b.val >> (FIXED_PT_PREC - 14)) >> (FIXED_PT_PREC - (2 * (FIXED_PT_PREC - 14)));
+    rv.val = (a.val >> (FIXED_PT_PREC - 15)) * (b.val >> (FIXED_PT_PREC - 15)) >> (FIXED_PT_PREC - (2 * (FIXED_PT_PREC - 15)));
     return rv;
 }
 
