@@ -24,6 +24,8 @@ struct RenderBuffer : public pimoroni::PicoGraphics
     static constexpr int RUNS_PER_LINE = 64;
     const uint8_t width_per_run;
 
+    uint clear_dma_channel;
+
     RenderBuffer(uint16_t width, uint16_t height, void *frame_buffer);
 
     void clear();

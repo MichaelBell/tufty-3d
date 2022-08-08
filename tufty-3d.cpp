@@ -214,10 +214,6 @@ int main() {
   absolute_time_t start_time = get_absolute_time();
   while (true)
   {
-    graphics.set_pen(show_duck ? DUCK_BG : TEA_BG);
-    graphics.set_depth(255);
-    graphics.clear();
-
     absolute_time_t render_start_time = get_absolute_time();
     if (show_duck) {
       render_model(duck_model, Vec3D { 0, -3, 10 }, orient);
@@ -238,6 +234,8 @@ int main() {
     graphics.set_depth(0);
     graphics.text(buf, Point(230, 6), Tufty2040::WIDTH);
 
+    graphics.set_pen(show_duck ? DUCK_BG : TEA_BG);
+    graphics.set_depth(255);
     st7789.update(&graphics);
     if (button_down.raw()) inc = 0.f;
     if (button_up.raw()) inc = 0.01f;

@@ -15,6 +15,8 @@ RenderBuffer::RenderBuffer(uint16_t width, uint16_t height, void *frame_buffer)
     if (this->frame_buffer == nullptr) {
         this->frame_buffer = (void *)(new PixelRun[height * RUNS_PER_LINE]);
     }
+    
+    clear_dma_channel = dma_claim_unused_channel(true);
 }
 
 void RenderBuffer::clear()
@@ -33,15 +35,14 @@ void RenderBuffer::clear()
         run[i] = clear_run;
     }
 #else
-    int chan = dma_claim_unused_channel(true);
-    dma_channel_config c = dma_channel_get_default_config(chan);
+    dma_channel_config c = dma_channel_get_default_config(clear_dma_channel);
     channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
     channel_config_set_read_increment(&c, false);
     channel_config_set_write_increment(&c, true);
 
-    dma_channel_configure(chan, &c, frame_buffer, &clear_run.val, bounds.h * RUNS_PER_LINE, true);
-    dma_channel_wait_for_finish_blocking(chan);
-    dma_channel_unclaim(chan);
+    dma_channel_wait_for_finish_blocking(clear_dma_channel);
+    dma_channel_configure(clear_dma_channel, &c, frame_buffer, &clear_run.val, bounds.h * RUNS_PER_LINE, true);
+    dma_channel_wait_for_finish_blocking(clear_dma_channel);
 #endif
 }
 
@@ -300,6 +301,15 @@ void __not_in_flash("render_buffer") RenderBuffer::set_pixel_span(const Point& p
 void RenderBuffer::scanline_convert(PenType type, conversion_callback_func callback)
 {
     if(type == PEN_RGB565) {
+        const PixelRun clear_run { colour, (uint8_t)(bounds.w / RUNS_PER_LINE), depth };
+
+        dma_channel_config c = dma_channel_get_default_config(clear_dma_channel);
+        channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+        channel_config_set_read_increment(&c, false);
+        channel_config_set_write_increment(&c, true);
+
+        dma_channel_configure(clear_dma_channel, &c, frame_buffer, &clear_run.val, RUNS_PER_LINE, false);
+
         // Allocate two per-row temporary buffers, as the callback may transfer by DMA
         // while we're preparing the next row
         uint16_t row_buf[2][bounds.w];
@@ -315,7 +325,11 @@ void RenderBuffer::scanline_convert(PenType type, conversion_callback_func callb
 
             // Callback to the driver with the row data
             callback(row_buf[y & 1], bounds.w * sizeof(RGB565));
+            dma_channel_wait_for_finish_blocking(clear_dma_channel);
+            dma_channel_start(clear_dma_channel);
         }
+
+        dma_channel_wait_for_finish_blocking(clear_dma_channel);
     }
 }
 
