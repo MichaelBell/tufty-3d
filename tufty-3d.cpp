@@ -26,59 +26,6 @@ using namespace pimoroni;
 RenderBuffer graphics(Tufty2040::WIDTH, Tufty2040::HEIGHT, nullptr);
 Scene scene;
 
-void draw_triangle(const Vec3D (&v)[3]) {
-  Point w[3];
-  for (int i = 0; i < 3; ++i) {
-    w[i] = make_point(project_vertex(v[i]));
-    //printf("%d %d %d\t%d %d\n", v[i].x, v[i].y, v[i].z, w[i].x, w[i].y);
-  }
-
-  graphics.line(w[0], w[1]);
-  graphics.line(w[1], w[2]);
-  graphics.line(w[2], w[0]);
-}
-
-void draw_cube(float theta, float phi) {
-  Vec3D cube[8] = {
-    { 1, 1, 1 },
-    { -1, 1, 1 },
-    { -1, -1, 1 },
-    { 1, -1, 1 },
-    { 1, 1, -1 },
-    { -1, 1, -1 },
-    { -1, -1, -1 },
-    { 1, -1, -1 }
-  };
-
-  Vec3D offset { 0, 0, 4};
-  Point w[8];
-  for (int i = 0; i < 8; ++i) {
-    Vec3D v;
-    fixed_t cp(cosf(phi));
-    fixed_t sp(sinf(phi));
-    v.x = cube[i].x;
-    v.y = cube[i].y * cp + cube[i].z * sp;
-    v.z = cube[i].z * cp - cube[i].y * sp;
-    cube[i] = v;
-
-    fixed_t ct(cosf(theta));
-    fixed_t st(sinf(theta));
-    v.x = cube[i].x * ct + cube[i].y * st;
-    v.y = cube[i].y * ct - cube[i].x * st;
-    v.z = cube[i].z;
-
-    v += offset;
-
-    w[i] = make_point(project_vertex(v));
-  }
-
-  for (int i = 0; i < 4; ++i) {
-    graphics.line(w[i], w[(i+1)&3]);
-    graphics.line(w[i + 4], w[((i+1)&3) + 4]);
-    graphics.line(w[i], w[i+4]);
-  }
-}
-
 int main() {
   constexpr uint32_t CLOCK_KHZ = 192000;
   set_sys_clock_khz(CLOCK_KHZ, true);
@@ -139,73 +86,6 @@ int main() {
   st7789.update(&graphics);
   printf("Start render loop\n");
 
-#if 0
-  float phi = 0;
-  float theta = 0;
-  while (true) {
-    phi += 0.01f;
-    theta += 0.002f;
-
-    graphics.set_pen(BG);
-    graphics.clear();
-    graphics.set_pen(WHITE);
-    draw_cube(theta, phi);
-    st7789.update(&graphics);
-  }
-#endif
-#if 0
-  for (float phi = 0; phi < 7.f; phi += 0.01f) {
-    graphics.set_pen(BG);
-    graphics.clear();
-
-    Model tri_model;
-    Vec3D tri[] = {
-      { 0, 0, 4 },
-      { 0, 0, 4 },
-      { 0, 0, 3 }
-    };
-    tri_model.vertices = tri;
-    tri_model.num_vertices = 3;
-    Triangle triangles[] = { { { 0, 1, 2 }, 0 } };
-    tri_model.triangles = triangles;
-    tri_model.num_triangles = 1;
-    tri_model.materials = &mat_white;
-    tri_model.num_materials = 1;
-
-    tri[0].x = cosf(phi);
-    tri[0].y = sinf(phi);
-    tri[1].x = cosf(phi + 1.1f);
-    tri[1].y = sinf(phi + 1.1f);
-    set_triangle_normals(tri_model);
-    render_model(tri_model);
-
-    tri[0] = tri[1];
-    tri[1].x = cosf(phi + 2.2f);
-    tri[1].y = sinf(phi + 2.2f);
-    tri_model.materials = &mat_red;
-    set_triangle_normals(tri_model);
-    render_model(tri_model);
-
-    tri[0] = tri[1];
-    tri[1].x = cosf(phi + 3.3f);
-    tri[1].y = sinf(phi + 3.3f);
-    tri_model.materials = &mat_green;
-    set_triangle_normals(tri_model);
-    render_model(tri_model);
-
-    tri[0] = tri[1];
-    tri[1].x = cosf(phi + 4.4f);
-    tri[1].y = sinf(phi + 4.4f);
-    tri_model.materials = &mat_blue;
-    set_triangle_normals(tri_model);
-    render_model(tri_model);
-
-    st7789.update(&graphics);
-
-    if (phi > 2 * M_PI) phi -= 2 * M_PI;
-  }
-#endif
-
   SceneObject duck;
   duck.pModel = &get_rduck_model();
   duck.transform.pos = Vec3D { 0, -3, 10 };
@@ -218,6 +98,8 @@ int main() {
   squirrel.pModel = &get_squirrel_model();
   squirrel.transform.pos = Vec3D { 0, -18, 38 };
 
+  scene.SetDisplay(&st7789);
+  scene.SetBackground(TEA_BG);
   scene.AddToScene(&squirrel);
 
   float x = 1.2f;
@@ -226,34 +108,18 @@ int main() {
   absolute_time_t start_time = get_absolute_time();
   while (true)
   {
-    absolute_time_t render_start_time = get_absolute_time();
     scene.RenderScene();
-    printf("Render time: %lldus\n", absolute_time_diff_us(render_start_time, get_absolute_time()));
 
-    absolute_time_t end_time = get_absolute_time();
-    int64_t frame_time_us = absolute_time_diff_us(start_time, end_time);
-    start_time = end_time;
-
-    char buf[20];
-    sprintf(buf, "FPS: %.1f", 1000000.f / frame_time_us);
-    printf("%s\n", buf);
-    graphics.set_pen(WHITE);
-    graphics.set_depth(0);
-    graphics.text(buf, Point(230, 6), Tufty2040::WIDTH);
-
-    graphics.set_pen(show_duck ? DUCK_BG : TEA_BG);
-    graphics.set_depth(255);
-    st7789.update(&graphics);
     if (button_down.raw()) inc = 0.f;
     if (button_up.raw()) inc = 0.01f;
     if (button_a.raw()) {
-      show_duck = false;
+      scene.SetBackground(TEA_BG);
       scene.ClearScene();
       scene.AddToScene(&squirrel);
     }
-
+    if (button_b.raw()) scene.ToggleFps();
     if (button_c.raw()) {
-      show_duck = true;
+      scene.SetBackground(DUCK_BG);
       scene.ClearScene();
       scene.AddToScene(&duck);
     }

@@ -89,6 +89,10 @@ inline Vec3D& operator-=(Vec3D& a, const Vec3D& b) {
   return a;
 }
 
+inline Vec3D operator-(const Vec3D& a) {
+  return Vec3D{ -a.x, -a.y, -a.z };
+}
+
 inline Vec3D operator*(const Vec3D& a, const Vec3D& b) {
   return Vec3D{ a.x * b.x, a.y * b.y, a.z * b.z };
 }
