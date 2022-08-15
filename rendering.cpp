@@ -206,3 +206,8 @@ void __not_in_flash("rendering") render_model(const Model& model, const Vec3D& p
         fill_triangle(w);
     }
 }
+
+void render_object(const SceneObject& object)
+{
+    render_model(*object.pModel, object.transform.pos, object.transform.orient);
+}

@@ -18,11 +18,13 @@
 #include "vector.h"
 #include "lighting.h"
 #include "rendering.h"
+#include "scene.h"
 #include "teapot.h"
 
 using namespace pimoroni;
 
 RenderBuffer graphics(Tufty2040::WIDTH, Tufty2040::HEIGHT, nullptr);
+Scene scene;
 
 void draw_triangle(const Vec3D (&v)[3]) {
   Point w[3];
@@ -204,9 +206,19 @@ int main() {
   }
 #endif
 
-  Model& duck_model = get_rduck_model();
-  Model& teapot_model = get_squirrel_model();
-  Matrix<3, 3> orient = MAT_IDENTITY;
+  SceneObject duck;
+  duck.pModel = &get_rduck_model();
+  duck.transform.pos = Vec3D { 0, -3, 10 };
+
+  SceneObject teapot;
+  teapot.pModel = &get_teapot_model();
+  teapot.transform.pos = Vec3D { 0, -2, 6 };
+
+  SceneObject squirrel;
+  squirrel.pModel = &get_squirrel_model();
+  squirrel.transform.pos = Vec3D { 0, -18, 38 };
+
+  scene.AddToScene(&squirrel);
 
   float x = 1.2f;
   float inc = 0.00f;
@@ -215,12 +227,7 @@ int main() {
   while (true)
   {
     absolute_time_t render_start_time = get_absolute_time();
-    if (show_duck) {
-      render_model(duck_model, Vec3D { 0, -3, 10 }, orient);
-    }
-    else {
-      render_model(teapot_model, Vec3D { 0, -18, 38 }, orient);
-    }
+    scene.RenderScene();
     printf("Render time: %lldus\n", absolute_time_diff_us(render_start_time, get_absolute_time()));
 
     absolute_time_t end_time = get_absolute_time();
@@ -239,15 +246,21 @@ int main() {
     st7789.update(&graphics);
     if (button_down.raw()) inc = 0.f;
     if (button_up.raw()) inc = 0.01f;
-    if (button_a.raw()) show_duck = false;
-    if (button_c.raw()) show_duck = true;
+    if (button_a.raw()) {
+      show_duck = false;
+      scene.ClearScene();
+      scene.AddToScene(&squirrel);
+    }
 
-    if (true || show_duck) {
-      orient = mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+    if (button_c.raw()) {
+      show_duck = true;
+      scene.ClearScene();
+      scene.AddToScene(&duck);
     }
-    else {
-      orient = mat_yaw(x);
-    }
+
+    teapot.transform.orient = mat_yaw(x);
+    duck.transform.orient = mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
+    squirrel.transform.orient = mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
     x += inc;
   }
 

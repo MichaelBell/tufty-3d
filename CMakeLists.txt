@@ -23,6 +23,7 @@ add_executable(${NAME}
     rendering.cpp
     renderbuffer.cpp
     renderasm.S
+    scene.cpp
 
     rduck.cpp
     teapot.cpp
