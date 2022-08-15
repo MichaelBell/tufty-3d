@@ -8,6 +8,8 @@
 class Scene
 {
 public:
+    void Init();
+
     void SetDisplay(pimoroni::ST7789* st7789) { m_st7789 = st7789; }
 
     void AddToScene(SceneObject* pObject);
@@ -23,6 +25,9 @@ public:
     void RenderScene();
 
 private:
+    friend void core_1_init();
+    void Core1Loop();
+
     pimoroni::ST7789* m_st7789 = nullptr;
     pimoroni::Pen m_bgPen = 0;
     bool m_fps = true;

@@ -1,6 +1,7 @@
 #include "scene.h"
 #include "common.h"
 #include "rendering.h"
+#include "pico/multicore.h"
 
 #include <algorithm>
 
@@ -31,15 +32,22 @@ void Scene::SetCameraTransform(const Transform& camera)
     }
 }
 
-void Scene::RenderScene()
+void core_1_init()
 {
-    absolute_time_t render_start_time = get_absolute_time();
-    for (const auto* pObject : m_objects)
-    {
-        Transform t = m_inverseCamera * pObject->transform;
-        render_model(*pObject->pModel, t.pos, t.orient);
-    }
-    printf("Render time: %lldus\n", absolute_time_diff_us(render_start_time, get_absolute_time()));
+  Scene* pScene = (Scene*)multicore_fifo_pop_blocking();
+  pScene->Core1Loop();
+}
+
+void Scene::Core1Loop()
+{
+    printf("Core 1 start\n");
+
+  multicore_fifo_push_blocking(0);
+
+  while (true)
+  {
+    // Wait for render buffer to be written
+    multicore_fifo_pop_blocking();
 
     absolute_time_t end_time = get_absolute_time();
     int64_t frame_time_us = absolute_time_diff_us(m_lastFrameTime, end_time);
@@ -57,4 +65,32 @@ void Scene::RenderScene()
     graphics.set_pen(m_bgPen);
     graphics.set_depth(255);
     m_st7789->update(&graphics);
+
+    // Indicate we are done with the render buffer
+    multicore_fifo_push_blocking(0);
+  }
+}
+
+void Scene::Init()
+{
+    multicore_launch_core1(core_1_init);
+    multicore_fifo_push_blocking((int)this);
+}
+
+void Scene::RenderScene()
+{
+    // Wait for previous frame to finish writing out to display
+    multicore_fifo_pop_blocking();
+
+    // Render objects
+    absolute_time_t render_start_time = get_absolute_time();
+    for (const auto* pObject : m_objects)
+    {
+        Transform t = m_inverseCamera * pObject->transform;
+        render_model(*pObject->pModel, t.pos, t.orient);
+    }
+    printf("Render time: %lldus\n", absolute_time_diff_us(render_start_time, get_absolute_time()));
+
+    // Write renderbuffer to display
+    multicore_fifo_push_blocking(0);
 }

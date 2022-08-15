@@ -98,6 +98,7 @@ int main() {
   squirrel.pModel = &get_squirrel_model();
   squirrel.transform.pos = Vec3D { 0, -18, 38 };
 
+  scene.Init();
   scene.SetDisplay(&st7789);
   scene.SetBackground(TEA_BG);
   scene.AddToScene(&squirrel);
@@ -117,7 +118,7 @@ int main() {
       scene.ClearScene();
       scene.AddToScene(&squirrel);
     }
-    if (button_b.raw()) scene.ToggleFps();
+    if (button_b.read()) scene.ToggleFps();
     if (button_c.raw()) {
       scene.SetBackground(DUCK_BG);
       scene.ClearScene();

@@ -53,6 +53,7 @@ target_link_libraries(${NAME}
     st7789
     hardware_spi
     pico_graphics
+    pico_multicore
     button
 )
 
