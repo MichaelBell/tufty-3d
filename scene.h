@@ -35,4 +35,11 @@ private:
 
     Transform m_inverseCamera;
     std::vector<SceneObject*> m_objects;
+
+    struct RenderCommand
+    {
+        Model* pModel;
+        Transform transform;
+    };
+    std::vector<RenderCommand> m_renderCmds;
 };

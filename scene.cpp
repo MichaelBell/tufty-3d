@@ -49,6 +49,11 @@ void Scene::Core1Loop()
     // Wait for render buffer to be written
     multicore_fifo_pop_blocking();
 
+    for (const auto& cmd : m_renderCmds)
+    {
+        render_model(*cmd.pModel, cmd.transform.pos, cmd.transform.orient);
+    }
+
     absolute_time_t end_time = get_absolute_time();
     int64_t frame_time_us = absolute_time_diff_us(m_lastFrameTime, end_time);
     m_lastFrameTime = end_time;
@@ -84,10 +89,13 @@ void Scene::RenderScene()
 
     // Render objects
     absolute_time_t render_start_time = get_absolute_time();
-    for (const auto* pObject : m_objects)
+    m_renderCmds.resize(m_objects.size());
+    for (size_t i = 0, iEnd = m_objects.size(); i < iEnd; ++i)
     {
-        Transform t = m_inverseCamera * pObject->transform;
-        render_model(*pObject->pModel, t.pos, t.orient);
+        const auto* pObject = m_objects[i];
+        RenderCommand& cmd = m_renderCmds[i];
+        cmd.pModel = pObject->pModel;
+        cmd.transform = m_inverseCamera * pObject->transform;
     }
     printf("Render time: %lldus\n", absolute_time_diff_us(render_start_time, get_absolute_time()));
 
