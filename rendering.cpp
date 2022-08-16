@@ -94,6 +94,11 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
   const int min_x = max(0, int(min(wo[0].x, wo[1].x)));
   const int max_x = min(Tufty2040::WIDTH - 1, int(max(wo[0].x, wo[2].x)));
 
+  if (min_x >= Tufty2040::WIDTH || max_x < 0)
+  {
+    return;
+  }
+
   if (wo[0].y == end_y) [[unlikely]] {
     graphics.set_pixel_span(Point(min_x, wo[0].y), max_x - min_x + 1);
     return;
@@ -198,6 +203,9 @@ void __not_in_flash("rendering") render_model(const Model& model, const Vec3D& p
         v[0] = orient_vector(orientation, model.vertices[tri.vert_idx_0]) + position;
         v[1] = orient_vector(orientation, model.vertices[tri.vert_idx_1]) + position;
         v[2] = orient_vector(orientation, model.vertices[tri.vert_idx_2]) + position;
+
+        constexpr fixed_t near_clip { 0.1f };
+        if (v[0].z < near_clip || v[1].z < near_clip || v[2].z < near_clip) continue;
 
         Vec2D w[3];
         if (!project_vertices(&v[0].x.val, &w[0].x.val)) continue;

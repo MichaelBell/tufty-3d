@@ -105,24 +105,42 @@ int main() {
 
   float x = 1.2f;
   float inc = 0.00f;
+  Transform camera;
+  const Vec3D fwd { 0, 0, 0.5f };
 
   absolute_time_t start_time = get_absolute_time();
   while (true)
   {
     scene.RenderScene();
 
-    if (button_down.raw()) inc = 0.f;
-    if (button_up.raw()) inc = 0.01f;
-    if (button_a.raw()) {
+    if (button_down.read()) {
+      camera.pos -= camera.orient * fwd;
+      scene.SetCameraTransform(camera);
+    }
+    if (button_up.read()) {
+      camera.pos += camera.orient * fwd;
+      scene.SetCameraTransform(camera);
+    }
+    if (button_a.read()) {
+      #if 0
       scene.SetBackground(TEA_BG);
       scene.ClearScene();
       scene.AddToScene(&squirrel);
+      #else
+      camera.orient *= mat_yaw(-0.1f);
+      scene.SetCameraTransform(camera);
+      #endif
     }
     if (button_b.read()) scene.ToggleFps();
-    if (button_c.raw()) {
+    if (button_c.read()) {
+      #if 0
       scene.SetBackground(DUCK_BG);
       scene.ClearScene();
       scene.AddToScene(&duck);
+      #else
+      camera.orient *= mat_yaw(0.1f);
+      scene.SetCameraTransform(camera);
+      #endif
     }
 
     teapot.transform.orient = mat_yaw(x);

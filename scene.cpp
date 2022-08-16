@@ -26,7 +26,7 @@ void Scene::SetCameraTransform(const Transform& camera)
 {
     m_inverseCamera.pos = -camera.pos;
     for (int i = 0; i < 3; ++i) {
-      for (int j = 0; i < 3; ++j) {
+      for (int j = 0; j < 3; ++j) {
         m_inverseCamera.orient(i, j) = camera.orient(j, i);
       }
     }
