@@ -28,6 +28,7 @@ add_executable(${NAME}
     rduck.cpp
     teapot.cpp
     squirrel.cpp
+    octahedron.cpp
 )
 
 pico_set_program_name(${NAME} "tufty-3d")

@@ -5,3 +5,4 @@
 Model& get_teapot_model();
 Model& get_rduck_model();
 Model& get_squirrel_model();
+Model& get_octahedron_model();

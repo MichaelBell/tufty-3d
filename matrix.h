@@ -85,6 +85,17 @@ inline Matrix<ROWS, COLS>& operator-=(Matrix<ROWS, COLS>& a, const Matrix<ROWS, 
     return a;
 }
 
+template<int ROWS, int COLS>
+inline Matrix<COLS, ROWS> transpose(const Matrix<ROWS, COLS>& a) {
+    Matrix<COLS, ROWS> m;
+    for (int i = 0; i < COLS; ++i) {
+        for (int j = 0; j < ROWS; ++j) {
+            m(j, i) = a(i, j);
+        }
+    }
+    return m;
+}
+
 template<int ROWS, int COLS, int COLS2>
 inline Matrix<ROWS, COLS2> operator*(const Matrix<ROWS, COLS>& a, const Matrix<COLS, COLS2>& b) {
     Matrix<ROWS, COLS2> m;

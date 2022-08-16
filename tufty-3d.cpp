@@ -86,6 +86,11 @@ int main() {
   st7789.update(&graphics);
   printf("Start render loop\n");
 
+  scene.Init();
+  scene.SetDisplay(&st7789);
+  scene.SetBackground(TEA_BG);
+
+#if 0
   SceneObject duck;
   duck.pModel = &get_rduck_model();
   duck.transform.pos = Vec3D { 0, -3, 10 };
@@ -98,9 +103,6 @@ int main() {
   squirrel.pModel = &get_squirrel_model();
   squirrel.transform.pos = Vec3D { 0, -18, 38 };
 
-  scene.Init();
-  scene.SetDisplay(&st7789);
-  scene.SetBackground(TEA_BG);
   scene.AddToScene(&squirrel);
 
   float x = 1.2f;
@@ -148,6 +150,52 @@ int main() {
     squirrel.transform.orient = mat_yaw(x) * mat_roll(-M_PI_2) * mat_pitch(M_PI_2);
     x += inc;
   }
+#else
+  Model* pOct = &get_octahedron_model();
+  
+  constexpr int num_particles = 20;
+  SceneObject particles[num_particles];
+  Vec3D vel[num_particles];
+  float ang_vel[num_particles][3];
+
+  while (true) {
+  for (int i = 0; i < num_particles; ++i) {
+    particles[i].pModel = pOct;
+    particles[i].transform.pos = Vec3D { 0, -10, 20 };
+    scene.AddToScene(&particles[i]);
+    vel[i].y = fixed_t((10.f * float(random()) / RAND_MAX) + 10);
+    vel[i].x = fixed_t((6.f * float(random()) / RAND_MAX) - 3);
+    vel[i].z = fixed_t((6.f * float(random()) / RAND_MAX) - 3);
+    ang_vel[i][0] = 4.f * (float(random()) / RAND_MAX) - 2;
+    ang_vel[i][1] = 4.f * (float(random()) / RAND_MAX) - 2;
+    ang_vel[i][2] = 4.f * (float(random()) / RAND_MAX) - 2;
+  }
+
+  absolute_time_t start_time = get_absolute_time();
+  while (!button_b.read()) {
+    scene.RenderScene();
+    absolute_time_t end_time = get_absolute_time();
+    float deltaT = absolute_time_diff_us(start_time, end_time) * 0.000001f;
+    start_time = end_time;
+
+    for (int i = 0; i < num_particles; ++i) {
+      particles[i].transform.pos += vel[i] * deltaT;
+      
+      if (particles[i].transform.pos.y < fixed_t(-10)) {
+        scene.RemoveFromScene(&particles[i]);
+      }
+      else {
+        vel[i].y -= fixed_t(9.8f * deltaT);
+        Matrix<3, 3> deltaRot = mat_yaw(ang_vel[i][1] * deltaT) * mat_roll(ang_vel[i][2] * deltaT) * mat_pitch(ang_vel[i][0] * deltaT);
+        particles[i].transform.orient *= deltaRot;
+      }
+    }
+  }  
+
+  scene.ClearScene();
+  }
+
+#endif
 
   return 0;
 }
