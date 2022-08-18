@@ -1,13 +1,12 @@
 #pragma once
 
-#include "tufty2040.hpp"
 #include "libraries/pico_graphics/pico_graphics.hpp"
 #include "renderbuffer.h"
 
 extern RenderBuffer graphics;
 
-constexpr int DISPLAY_WIDTH = pimoroni::Tufty2040::WIDTH;
-constexpr int DISPLAY_HEIGHT = pimoroni::Tufty2040::HEIGHT;
+constexpr int DISPLAY_WIDTH = 640;
+constexpr int DISPLAY_HEIGHT = 240;
 
 using std::min, std::max;
 

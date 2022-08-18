@@ -1,6 +1,8 @@
 #include "common.h"
 #include "renderbuffer.h"
 #include "hardware/dma.h"
+#include "pico/scanvideo.h"
+#include "pico/scanvideo/composable_scanline.h"
 
 using namespace pimoroni;
 
@@ -13,10 +15,11 @@ RenderBuffer::RenderBuffer(uint16_t width, uint16_t height, void *frame_buffer)
 
     pen_type = PEN_1BIT;  // Anything that gets scanline convert called on it.
     if (this->frame_buffer == nullptr) {
-        this->frame_buffer = (void *)(new PixelRun[height * RUNS_PER_LINE]);
+        this->frame_buffer = (void *)(new PixelRun[height * RUNS_PER_LINE * 2]);
     }
     
-    clear_dma_channel = dma_claim_unused_channel(true);
+    // Scanvideo is evil and just randomly uses low channel numbers, so we choose a higher number...
+    clear_dma_channel = 6; dma_channel_claim(6);
 }
 
 void RenderBuffer::clear()
@@ -43,17 +46,25 @@ void RenderBuffer::clear()
     dma_channel_wait_for_finish_blocking(clear_dma_channel);
     dma_channel_configure(clear_dma_channel, &c, frame_buffer, &clear_run.val, bounds.h * RUNS_PER_LINE, true);
     dma_channel_wait_for_finish_blocking(clear_dma_channel);
+
+    bufnum = 0;
 #endif
 }
 
 void RenderBuffer::set_pen(uint8_t r, uint8_t g, uint8_t b)
 {
-    colour = RGB(r, g, b).to_rgb565();
+    uint16_t p = ((r & 0b11111000) >> 3) |
+                 ((g & 0b11111000) << 3) |
+                 ((b & 0b11111000) << 8);
+    colour = p;
 }
 
 int RenderBuffer::create_pen(uint8_t r, uint8_t g, uint8_t b)
 {
-    return RGB(r, g, b).to_rgb565();
+    uint16_t p = ((r & 0b11111000) >> 3) |
+                 ((g & 0b11111000) << 3) |
+                 ((b & 0b11111000) << 8);
+    return p;
 }
 
 void RenderBuffer::set_pixel(const Point &p)
@@ -333,8 +344,90 @@ void RenderBuffer::scanline_convert(PenType type, conversion_callback_func callb
     }
 }
 
+void RenderBuffer::scanvideo()
+{
+        const PixelRun clear_run { bg_colour, (uint8_t)(bounds.w / RUNS_PER_LINE), 255 };
+
+        dma_channel_config c = dma_channel_get_default_config(clear_dma_channel);
+        channel_config_set_transfer_data_size(&c, DMA_SIZE_32);
+        channel_config_set_read_increment(&c, false);
+        channel_config_set_write_increment(&c, true);
+
+        dma_channel_configure(clear_dma_channel, &c, (PixelRun*)frame_buffer + (bufnum ^ 1) * bounds.h * RUNS_PER_LINE, &clear_run.val, RUNS_PER_LINE, false);
+
+        struct scanvideo_scanline_buffer *scanline_buffer = scanvideo_begin_scanline_generation(true);
+        const uint32_t frame_num = scanvideo_frame_number(scanline_buffer->scanline_id);
+        while (scanvideo_frame_number(scanline_buffer->scanline_id) == frame_num) {
+            uint32_t y = scanvideo_scanline_number(scanline_buffer->scanline_id);
+            if (y >= DISPLAY_HEIGHT) break;
+
+            PixelRun* run = get_run(y, 0, bufnum ^ 1);
+            uint16_t* buf = (uint16_t*)scanline_buffer->data;
+
+            int x = 0;
+            uint16_t color;
+            for (int i = 0; i < RUNS_PER_LINE; i++) {
+                color = run[i].colour;
+                uint16_t len = run[i].run_length;
+                switch (len) {
+                    case 0:
+                        break;
+                    case 1:
+                        *buf++ = COMPOSABLE_RAW_1P;
+                        *buf++ = color;
+                        break;
+                    case 2:
+                        *buf++ = COMPOSABLE_RAW_2P;
+                        *buf++ = color;
+                        *buf++ = color;
+                        break;
+                    default:
+                        *buf++ = COMPOSABLE_COLOR_RUN;
+                        *buf++ = color;
+                        *buf++ = (len - 3);
+                        break;
+                }
+            }
+
+            if (color != 0)
+            {
+                *buf++ = COMPOSABLE_RAW_1P;
+                *buf++ = 0;
+            }
+            if (2 & (uintptr_t) buf) {
+                *buf++ = COMPOSABLE_EOL_ALIGN;
+            } else {
+                *buf++ = COMPOSABLE_EOL_SKIP_ALIGN;
+                *buf++ = 0xffff;
+            }
+
+            scanline_buffer->status = SCANLINE_OK;
+            scanline_buffer->data_used = (uint32_t*)buf - scanline_buffer->data;
+
+            scanvideo_end_scanline_generation(scanline_buffer);
+
+            dma_channel_wait_for_finish_blocking(clear_dma_channel);
+            dma_channel_start(clear_dma_channel);
+
+            scanline_buffer = scanvideo_begin_scanline_generation(true);
+        }
+
+        scanline_buffer->status = SCANLINE_ERROR;
+        scanline_buffer->data_used = 0;
+
+        scanvideo_end_scanline_generation(scanline_buffer);
+
+        dma_channel_wait_for_finish_blocking(clear_dma_channel);
+}
+
 PixelRun* __not_in_flash("render_buffer") RenderBuffer::get_run(int y, int x)
 {
     PixelRun* run = static_cast<PixelRun*>(frame_buffer);
-    return &run[y * RUNS_PER_LINE + x];
+    return &run[y * RUNS_PER_LINE + x + bufnum * bounds.h * RUNS_PER_LINE];
+}
+
+PixelRun* __not_in_flash("render_buffer") RenderBuffer::get_run(int y, int x, int b)
+{
+    PixelRun* run = static_cast<PixelRun*>(frame_buffer);
+    return &run[y * RUNS_PER_LINE + x + b * bounds.h * RUNS_PER_LINE];
 }

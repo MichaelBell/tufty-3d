@@ -4,23 +4,23 @@
 
 using namespace pimoroni;
 
-const Vec2D screen_size { Tufty2040::WIDTH, Tufty2040::HEIGHT };
+const Vec2D screen_size { DISPLAY_WIDTH, DISPLAY_HEIGHT };
 const Vec2D half_screen_size = screen_size >> 1;
 
-const int screen_scale = Tufty2040::WIDTH << 5;
+const int screen_scale = DISPLAY_WIDTH << 5;
 
 // Project vertices to screen space and return false if is a back face
 extern "C" bool project_vertices(int* v, int* w);
 
-#if 0
+#if 1
 // Project from camera relative space (Z forward from camera, X right, Y up)
 // into screen space
 Vec2D __not_in_flash_func(project_vertex)(const Vec3D& v) {
-  const int inv_z = 0x40000000 / v.z.val; //hw_divider_quotient_s32(0x40000000, v.z.val);
+  const int inv_z = hw_divider_s32_quotient_inlined(0x40000000, v.z.val);
   const int scale = screen_scale * inv_z;
   Vec2D rv;
   rv.x.val = scale;
-  rv.y.val = -scale;
+  rv.y.val = -scale >> 1;
   return (Vec2D{v.x, v.y} * rv) + half_screen_size;
 }
 
@@ -87,14 +87,14 @@ void __not_in_flash("rendering") fill_triangle(const Vec2D (&w)[3]) {
     }
   }
 
-  if (wo[0].y >= Tufty2040::HEIGHT) return;
-  const int end_y = min(max(wo[1].y, wo[2].y), Tufty2040::HEIGHT - 1);
+  if (wo[0].y >= DISPLAY_HEIGHT) return;
+  const int end_y = min(max(wo[1].y, wo[2].y), DISPLAY_HEIGHT - 1);
   if (end_y < 0) return;
 
   const int min_x = max(0, int(min(wo[0].x, wo[1].x)));
-  const int max_x = min(Tufty2040::WIDTH - 1, int(max(wo[0].x, wo[2].x)));
+  const int max_x = min(DISPLAY_WIDTH - 1, int(max(wo[0].x, wo[2].x)));
 
-  if (min_x >= Tufty2040::WIDTH || max_x < 0)
+  if (min_x >= DISPLAY_WIDTH || max_x < 0)
   {
     return;
   }
@@ -208,7 +208,17 @@ void __not_in_flash("rendering") render_model(const Model& model, const Vec3D& p
         if (v[0].z < near_clip || v[1].z < near_clip || v[2].z < near_clip) continue;
 
         Vec2D w[3];
+
+        // Not using ASM for now as that hardcodes the resolution.
+#if 0
         if (!project_vertices(&v[0].x.val, &w[0].x.val)) continue;
+#else
+        for (int j = 0; j < 3; ++j) {
+          w[j] = project_vertex(v[j]);
+        }
+        if (is_back_face(w)) continue;
+#endif
+
         set_depth_for_triangle(v);
 
         fill_triangle(w);

@@ -5,8 +5,7 @@ set(NAME tufty-3d) # <-- Name your project/executable here!
 
 include(pimoroni_pico_import.cmake)
 include(pico_sdk_import.cmake)
-
-set(PICO_BOARD pimoroni_tufty2040)
+include(pico_extras_import.cmake)
 
 # Gooey boilerplate
 project(${NAME} C CXX ASM)
@@ -18,7 +17,7 @@ pico_sdk_init()
 
 # Add your source files
 add_executable(${NAME}
-    tufty-3d.cpp 
+    vgamain.cpp
     lighting.cpp
     rendering.cpp
     renderbuffer.cpp
@@ -55,6 +54,7 @@ target_link_libraries(${NAME}
     hardware_spi
     pico_graphics
     pico_multicore
+    pico_scanvideo_dpi
     button
 )
 
